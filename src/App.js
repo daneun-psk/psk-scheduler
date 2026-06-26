@@ -449,7 +449,7 @@ export default function App() {
     const newLot = allLots.find(l => l.id === suggestedLotId);
     if (!newLot) return;
 
-    setResults(prev => prev.map(row => {
+    const updatedResults = results.map(row => {
       const rowSN = extractSN(row['비고']);
       if (rowSN !== sn) return row;
       const currentLotId = row['배정 LOT'] || row['배정LOT'];
@@ -457,19 +457,22 @@ export default function App() {
       return {
         ...row,
         '배정 LOT': suggestedLotId,
+        '납품일': newLot.partDate,
         '생산완료일': newLot.prodDate,
         '출하가능일': newLot.shipDate,
         '비고': prevBigo + ` [LOT변경:${currentLotId}→${suggestedLotId}]`,
         _status: row._status === '납기변경' ? '납기변경' : '재배정',
       };
-    }));
+    });
 
-    // 적용 후 최적화 결과 초기화 (재실행 유도)
-    setOptimizationResult(null);
+    setResults(updatedResults);
+    // 업데이트된 results로 즉시 재최적화 → 패널 유지
+    runOptimization(updatedResults);
   };
 
-  const runOptimization = () => {
-    if (results.length === 0) return;
+  const runOptimization = (targetResults = null) => {
+    const baseResults = targetResults || results;
+    if (baseResults.length === 0) return;
 
     const allLots = [
       ...mappingRules.atmMaster,
@@ -483,16 +486,16 @@ export default function App() {
     // 현재 LOT 부하 집계
     const loadMap = {};
     allLots.forEach(lot => { loadMap[lot.id] = { used: 0, maxCapa: lot.maxCapa, shipDate: lot.shipDate }; });
-    results.forEach(row => {
+    baseResults.forEach(row => {
       const lotId = row['배정 LOT'] || row['배정LOT'];
       if (lotId && loadMap[lotId]) loadMap[lotId].used++;
     });
 
     // (고객사, 모델) 그룹화 — 그룹=Sales + 배정 LOT + 납품일 있는 것만
     const groups = {};
-    results.forEach((row) => {
+    baseResults.forEach((row) => {
       const lotId = row['배정 LOT'] || row['배정LOT'];
-      const reqDate = row['납품일'];
+      const reqDate = row['고객 납기'] || row['납품일'];
       const group = row['그룹'] || '';
       if (!lotId || !reqDate || lotId === '-' || lotId === '' || lotId === '미배정') return;
       if (group !== 'Sales') return;
