@@ -145,6 +145,15 @@ export default function App() {
 
   // ==========================================
   // 배정 로직 (FCST 스케줄러 탭)
+  // 날짜 정규화: 포맷 통일 후 YYYY-MM-DD 문자열 반환 (비교용)
+  const normDate = (d) => {
+    if (!d) return '';
+    const s = String(d).trim().replace(/\./g, '-').replace(/\//g, '-');
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!m) return '';
+    return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  };
+
   // ==========================================
   const processData = () => {
     setStatus({ type: 'loading', message: '데이터 분석 중...' });
@@ -268,18 +277,26 @@ export default function App() {
 
           if (existingEntries && existingEntries.length > 0) {
             const existingDate = existingEntries[0].partDate;
-            if (existingDate === reqDate) {
-              // 유지 (변경없음)
+            const normExisting = normDate(existingDate);
+            const normReq = normDate(reqDate);
+
+            if (!normExisting || normExisting === normReq) {
+              // 유지 — 날짜 없거나 동일 (날짜 없으면 고객 납기 보완)
               unchangedCount += qty;
-              existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
+              existingEntries.forEach(e => {
+                existingData[e.idx]._status = '유지';
+                if (!existingData[e.idx]['고객 납기'] && reqDate) {
+                  existingData[e.idx]['고객 납기'] = reqDate;
+                }
+              });
             } else {
               // 납기변경 — 고객 납기만 업데이트 (납품일=LOT partDate는 건드리지 않음)
-              changedItems.push({ sn: inputSN, oldDate: existingDate, newDate: reqDate, clientName, fabName, model: modelInfo.model });
+              changedItems.push({ sn: inputSN, oldDate: normExisting, newDate: normReq, clientName, fabName, model: modelInfo.model });
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
                 existingData[e.idx]['고객 납기'] = reqDate;
                 const prevBigo = existingData[e.idx]['비고'] || '';
-                existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${existingDate}→${reqDate}]`;
+                existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${normExisting}→${normReq}]`;
               });
             }
             return; // 중복 추가 방지
