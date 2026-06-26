@@ -199,6 +199,7 @@ export default function App() {
           const isNew = cols.some(c => c && c.includes('신규'));
 
           if (isNew) {
+            const inputSN = cols[0] || '';
             const rawLine = Object.keys(mappingRules.lineMap).find(key => cols.includes(key));
             const rawModel = Object.keys(mappingRules.modelMap).find(key => cols.includes(key));
 
@@ -286,6 +287,7 @@ export default function App() {
               }
 
               if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
+              if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
 
               processed.push({
                 '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
