@@ -322,6 +322,7 @@ export default function App() {
             if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
 
             newItems.push({
+              '그룹': 'Sales',
               '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
               '배정 LOT': assignedAtm, '비고': remarksArr.join(', '), '납품일': reqDate,
               '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true, '_status': '신규'
@@ -396,12 +397,14 @@ export default function App() {
       if (lotId && loadMap[lotId]) loadMap[lotId].used++;
     });
 
-    // (고객사, 모델) 그룹화 — 배정 LOT + 납품일 있는 것만
+    // (고객사, 모델) 그룹화 — 그룹=Sales + 배정 LOT + 납품일 있는 것만
     const groups = {};
     results.forEach((row) => {
       const lotId = row['배정 LOT'] || row['배정LOT'];
       const reqDate = row['납품일'];
+      const group = row['그룹'] || '';
       if (!lotId || !reqDate || lotId === '-' || lotId === '' || lotId === '미배정') return;
+      if (group !== 'Sales') return;
       const key = `${row['고객사'] || ''}||${row['모델'] || ''}`;
       if (!groups[key]) groups[key] = { clientName: row['고객사'] || '', modelName: row['모델'] || '', items: [] };
       groups[key].items.push(row);
