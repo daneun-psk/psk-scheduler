@@ -11,6 +11,7 @@ export default function App() {
   const [sompInput, setSompInput] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
+  const [analysisResult, setAnalysisResult] = useState(null);
 
   const defaultRules = {
     lineMap: {
@@ -144,14 +145,16 @@ export default function App() {
   // 배정 로직 (FCST 스케줄러 탭)
   // ==========================================
   const processData = () => {
-    setStatus({ type: 'loading', message: '데이터 병합 및 스캔 중...' });
+    setStatus({ type: 'loading', message: '데이터 분석 중...' });
     setResults([]);
+    setAnalysisResult(null);
 
     setTimeout(() => {
       try {
         const atmLoad = {};
         mappingRules.atmMaster.forEach(atm => { atmLoad[atm.id] = 0; });
 
+        // ── SOMP 파싱 ──────────────────────────────────────
         const sompLines = sompInput.trim().split('\n').filter(line => line.trim() !== '');
         const existingData = [];
         let sompHeaders = [];
@@ -162,18 +165,29 @@ export default function App() {
             const cols = sompLines[i].split('\t').map(c => c.trim());
             const rowObj = {};
             sompHeaders.forEach((h, idx) => { rowObj[h] = cols[idx] || ''; });
-            existingData.push({ ...rowObj, _isNew: false });
+            existingData.push({ ...rowObj, _isNew: false, _status: '기존' });
             cols.forEach(c => {
               if (c.startsWith('ATM-') && atmLoad[c] !== undefined) atmLoad[c]++;
             });
           }
         }
 
-        const fcstLines = fcstInput.trim().split('\n').filter(line => line.trim() !== '');
-        const processed = [];
-        let successCount = 0;
-        let failCount = 0;
+        // ── SOMP S/N 인덱스 생성 ───────────────────────────
+        // { sn: [{ idx, partDate }] }
+        const sompSNMap = {};
+        existingData.forEach((row, idx) => {
+          const bigo = row['비고'] || '';
+          const m = bigo.match(/\[S\/N:([^\]]+)\]/);
+          if (m) {
+            const sn = m[1];
+            const partDate = row['납품일'] || '';
+            if (!sompSNMap[sn]) sompSNMap[sn] = [];
+            sompSNMap[sn].push({ idx, partDate });
+          }
+        });
 
+        // ── FCST 헤더 감지 ─────────────────────────────────
+        const fcstLines = fcstInput.trim().split('\n').filter(line => line.trim() !== '');
         let fcstHeaderIdx = -1;
         let reqDateIndices = [];
         let qtyIdx = -1;
@@ -194,117 +208,154 @@ export default function App() {
 
         const dataRows = fcstHeaderIdx !== -1 ? fcstLines.slice(fcstHeaderIdx + 1) : fcstLines;
 
+        // ── 분류 결과 수집 ─────────────────────────────────
+        const newItems = [];
+        const changedItems = [];
+        let unchangedCount = 0;
+        const fcstSNSet = new Set();
+        const fcstCustomers = new Set();
+
         dataRows.forEach((row) => {
           const cols = row.split('\t').map(c => c.trim());
           const isNew = cols.some(c => c && c.includes('신규'));
+          if (!isNew) return;
 
-          if (isNew) {
-            const inputSN = cols[0] || '';
-            const rawLine = Object.keys(mappingRules.lineMap).find(key => cols.includes(key));
-            const rawModel = Object.keys(mappingRules.modelMap).find(key => cols.includes(key));
+          const inputSN = cols[0] || '';
+          const rawLine = Object.keys(mappingRules.lineMap).find(key => cols.includes(key));
+          const rawModel = Object.keys(mappingRules.modelMap).find(key => cols.includes(key));
+          const fabName = rawLine ? mappingRules.lineMap[rawLine] : '';
+          const clientName = fabName ? (mappingRules.fabClientMap[fabName] || '') : '';
+          if (clientName) fcstCustomers.add(clientName);
+          const modelInfo = rawModel ? mappingRules.modelMap[rawModel] : { model: '', pm: '' };
 
-            let qty = 1;
-            if (qtyIdx !== -1 && cols[qtyIdx]) {
-              qty = parseInt(cols[qtyIdx].replace(/[^0-9]/g, '')) || 1;
-            } else {
-              const qtyStr = cols.find(c => /^\d{1,3}$/.test(c));
-              qty = qtyStr ? parseInt(qtyStr) : 1;
+          let qty = 1;
+          if (qtyIdx !== -1 && cols[qtyIdx]) {
+            qty = parseInt(cols[qtyIdx].replace(/[^0-9]/g, '')) || 1;
+          } else {
+            const qtyStr = cols.find(c => /^\d{1,3}$/.test(c));
+            qty = qtyStr ? parseInt(qtyStr) : 1;
+          }
+
+          let rawDate = '', prevDateRaw = '', isDateChanged = false;
+          if (reqDateIndices.length > 0) {
+            const currIdx = reqDateIndices[reqDateIndices.length - 1];
+            rawDate = cols[currIdx] || '';
+            if (reqDateIndices.length > 1) {
+              const prevIdx = reqDateIndices[0];
+              prevDateRaw = cols[prevIdx] || '';
+              if (prevDateRaw && rawDate && prevDateRaw !== rawDate) isDateChanged = true;
             }
-
-            let rawDate = '';
-            let prevDateRaw = '';
-            let isDateChanged = false;
-
-            if (reqDateIndices.length > 0) {
-              const currIdx = reqDateIndices[reqDateIndices.length - 1];
-              rawDate = cols[currIdx] || '';
-              if (reqDateIndices.length > 1) {
-                const prevIdx = reqDateIndices[0];
-                prevDateRaw = cols[prevIdx] || '';
-                if (prevDateRaw && rawDate && prevDateRaw !== rawDate) isDateChanged = true;
-              }
-            } else {
-              const dateMatches = cols.filter(c => /^\d{4}[-.]\d{2}[-.]\d{2}/.test(c));
-              if (dateMatches.length > 0) {
-                rawDate = dateMatches[dateMatches.length - 1];
-                if (dateMatches.length >= 2) {
-                  prevDateRaw = dateMatches[dateMatches.length - 2];
-                  if (prevDateRaw !== rawDate) isDateChanged = true;
-                }
+          } else {
+            const dateMatches = cols.filter(c => /^\d{4}[-.]\d{2}[-.]\d{2}/.test(c));
+            if (dateMatches.length > 0) {
+              rawDate = dateMatches[dateMatches.length - 1];
+              if (dateMatches.length >= 2) {
+                prevDateRaw = dateMatches[dateMatches.length - 2];
+                if (prevDateRaw !== rawDate) isDateChanged = true;
               }
             }
+          }
 
-            const reqDate = rawDate.replace(/\./g, '-');
-            const prevReqDate = prevDateRaw.replace(/\./g, '-');
-            const fabName = rawLine ? mappingRules.lineMap[rawLine] : '';
-            const clientName = fabName ? (mappingRules.fabClientMap[fabName] || '') : '';
-            const modelInfo = rawModel ? mappingRules.modelMap[rawModel] : { model: '', pm: '' };
+          const reqDate = rawDate.replace(/\./g, '-');
+          const prevReqDate = prevDateRaw.replace(/\./g, '-');
+          if (inputSN) fcstSNSet.add(inputSN);
 
-            if (!rawLine || !rawModel) failCount++;
+          // ── S/N 기반 분류 ──────────────────────────────
+          const existingEntries = inputSN ? sompSNMap[inputSN] : null;
 
-            let reqDateObj = reqDate ? new Date(reqDate) : null;
-
-            for (let i = 0; i < qty; i++) {
-              let assignedAtm = '';
-              let prodEndDate = '';
-              let shipAvailableDate = '';
-              let finalReqDate = reqDate;
-              let remarksArr = [];
-
-              if (!rawLine) remarksArr.push('라인 미등록');
-              if (!rawModel) remarksArr.push('모델 미등록');
-              if (!reqDate) remarksArr.push('납품일 누락');
-              if (isDateChanged) remarksArr.push(`납기변경(${prevReqDate} ➡️ ${reqDate})`);
-
-              if (reqDateObj) {
-                let matchedAtm = null;
-                const targetReqDate = new Date(reqDateObj);
-                targetReqDate.setHours(0, 0, 0, 0);
-
-                for (let j = mappingRules.atmMaster.length - 1; j >= 0; j--) {
-                  const atm = mappingRules.atmMaster[j];
-                  if (!atm.shipDate) continue;
-                  const shipDateObj = new Date(atm.shipDate);
-                  shipDateObj.setHours(0, 0, 0, 0);
-                  if (shipDateObj <= targetReqDate) {
-                    matchedAtm = atm;
-                    break;
-                  }
-                }
-
-                if (matchedAtm) {
-                  assignedAtm = matchedAtm.id;
-                  prodEndDate = matchedAtm.prodDate;
-                  shipAvailableDate = matchedAtm.shipDate;
-                  const currentLoad = atmLoad[matchedAtm.id] + 1;
-                  if (currentLoad > matchedAtm.maxCapa) {
-                    remarksArr.push(`CAPA초과 (${currentLoad}/${matchedAtm.maxCapa})`);
-                  }
-                  atmLoad[matchedAtm.id] = currentLoad;
-                } else {
-                  remarksArr.push('적합한 ATM없음');
-                }
-              }
-
-              if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
-              if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
-
-              processed.push({
-                '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
-                '배정 LOT': assignedAtm, '비고': remarksArr.join(', '), '납품일': finalReqDate,
-                '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true
+          if (existingEntries && existingEntries.length > 0) {
+            const existingDate = existingEntries[0].partDate;
+            if (existingDate === reqDate) {
+              // 유지 (변경없음)
+              unchangedCount += qty;
+              existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
+            } else {
+              // 납기변경
+              changedItems.push({ sn: inputSN, oldDate: existingDate, newDate: reqDate, clientName, fabName, model: modelInfo.model });
+              existingEntries.forEach(e => {
+                existingData[e.idx]._status = '납기변경';
+                existingData[e.idx]['납품일'] = reqDate;
+                const prevBigo = existingData[e.idx]['비고'] || '';
+                existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${existingDate}→${reqDate}]`;
               });
-              successCount++;
+            }
+            return; // 중복 추가 방지
+          }
+
+          // ── 신규 처리 ──────────────────────────────────
+          const reqDateObj = reqDate ? new Date(reqDate) : null;
+          for (let i = 0; i < qty; i++) {
+            let assignedAtm = '', prodEndDate = '', shipAvailableDate = '';
+            let remarksArr = [];
+
+            if (!rawLine) remarksArr.push('라인 미등록');
+            if (!rawModel) remarksArr.push('모델 미등록');
+            if (!reqDate) remarksArr.push('납품일 누락');
+            if (isDateChanged) remarksArr.push(`납기변경(${prevReqDate} ➡️ ${reqDate})`);
+
+            if (reqDateObj) {
+              let matchedAtm = null;
+              const targetReqDate = new Date(reqDateObj);
+              targetReqDate.setHours(0, 0, 0, 0);
+              for (let j = mappingRules.atmMaster.length - 1; j >= 0; j--) {
+                const atm = mappingRules.atmMaster[j];
+                if (!atm.shipDate) continue;
+                const shipDateObj = new Date(atm.shipDate);
+                shipDateObj.setHours(0, 0, 0, 0);
+                if (shipDateObj <= targetReqDate) { matchedAtm = atm; break; }
+              }
+              if (matchedAtm) {
+                assignedAtm = matchedAtm.id;
+                prodEndDate = matchedAtm.prodDate;
+                shipAvailableDate = matchedAtm.shipDate;
+                const currentLoad = atmLoad[matchedAtm.id] + 1;
+                if (currentLoad > matchedAtm.maxCapa) remarksArr.push(`CAPA초과 (${currentLoad}/${matchedAtm.maxCapa})`);
+                atmLoad[matchedAtm.id] = currentLoad;
+              } else {
+                remarksArr.push('적합한 ATM없음');
+              }
+            }
+
+            if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
+            if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
+
+            newItems.push({
+              '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
+              '배정 LOT': assignedAtm, '비고': remarksArr.join(', '), '납품일': reqDate,
+              '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true, '_status': '신규'
+            });
+          }
+        });
+
+        // ── 삭제 후보 감지 ─────────────────────────────────
+        const deletedCandidates = [];
+        Object.entries(sompSNMap).forEach(([sn, entries]) => {
+          if (!fcstSNSet.has(sn)) {
+            const row = existingData[entries[0].idx];
+            const rowCustomer = row['고객사'] || '';
+            if (fcstCustomers.size === 0 || fcstCustomers.has(rowCustomer)) {
+              deletedCandidates.push({ sn, clientName: rowCustomer, fabName: row['FAB'] || '', partDate: entries[0].partDate });
             }
           }
         });
 
-        const combinedResults = [...existingData, ...processed];
+        const combinedResults = [...existingData, ...newItems];
+
+        setAnalysisResult({
+          newCount: newItems.length,
+          changedItems,
+          unchangedCount,
+          deletedCandidates,
+        });
+
         if (combinedResults.length === 0) {
           setStatus({ type: 'error', message: '출력할 데이터가 없습니다.' });
         } else {
           setResults(combinedResults);
-          setStatus({ type: 'success', message: `배정 완료 (기존 ${existingData.length}건 + 신규 ${successCount}건 추가됨)` });
+          setStatus({
+            type: 'success',
+            message: `분석 완료 — 신규 ${newItems.length}건 / 납기변경 ${changedItems.length}건 / 변경없음 ${unchangedCount}건 / 삭제후보 ${deletedCandidates.length}건`
+          });
         }
       } catch (err) {
         setStatus({ type: 'error', message: '데이터 파싱 중 오류가 발생했습니다.' });
@@ -684,13 +735,97 @@ export default function App() {
               {status.message && status.type !== 'loading' && (
                 <div className={`p-4 rounded-lg font-bold text-center border ${status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>{status.message}</div>
               )}
+
+              {/* ── 분석 메시지 패널 ── */}
+              {analysisResult && (
+                <div className="bg-white rounded-xl shadow border overflow-hidden">
+                  <div className="px-6 py-3 bg-gray-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-400" />
+                    <span className="text-sm font-bold text-white">FCST 변경점 분석 결과</span>
+                  </div>
+                  <div className="grid grid-cols-4 divide-x text-sm">
+                    {/* 신규 */}
+                    <div className="p-4 bg-blue-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                        <span className="font-bold text-blue-800">신규 추가</span>
+                        <span className="ml-auto text-xl font-black text-blue-600">{analysisResult.newCount}</span>
+                        <span className="text-blue-500 text-xs">건</span>
+                      </div>
+                      <p className="text-xs text-blue-600">SOMP에 없는 신규 설비로 LOT 자동배정됨</p>
+                    </div>
+                    {/* 납기변경 */}
+                    <div className="p-4 bg-orange-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
+                        <span className="font-bold text-orange-800">납기 변경</span>
+                        <span className="ml-auto text-xl font-black text-orange-600">{analysisResult.changedItems.length}</span>
+                        <span className="text-orange-500 text-xs">건</span>
+                      </div>
+                      {analysisResult.changedItems.length > 0 ? (
+                        <ul className="text-xs text-orange-700 space-y-1 max-h-28 overflow-y-auto">
+                          {analysisResult.changedItems.map((item, i) => (
+                            <li key={i} className="flex gap-1 items-center">
+                              <span className="font-bold shrink-0">S/N {item.sn}</span>
+                              <span className="text-orange-400">|</span>
+                              <span className="line-through text-orange-400">{item.oldDate}</span>
+                              <span>→</span>
+                              <span className="font-bold">{item.newDate}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="text-xs text-orange-500">변경 없음</p>}
+                    </div>
+                    {/* 변경없음 */}
+                    <div className="p-4 bg-gray-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
+                        <span className="font-bold text-gray-700">변경 없음</span>
+                        <span className="ml-auto text-xl font-black text-gray-500">{analysisResult.unchangedCount}</span>
+                        <span className="text-gray-400 text-xs">건</span>
+                      </div>
+                      <p className="text-xs text-gray-500">S/N 및 납기일 동일 → 중복 추가 없이 유지</p>
+                    </div>
+                    {/* 삭제 후보 */}
+                    <div className="p-4 bg-red-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                        <span className="font-bold text-red-800">삭제 후보</span>
+                        <span className="ml-auto text-xl font-black text-red-600">{analysisResult.deletedCandidates.length}</span>
+                        <span className="text-red-500 text-xs">건</span>
+                      </div>
+                      {analysisResult.deletedCandidates.length > 0 ? (
+                        <ul className="text-xs text-red-700 space-y-1 max-h-28 overflow-y-auto">
+                          {analysisResult.deletedCandidates.map((item, i) => (
+                            <li key={i} className="flex gap-1 items-center">
+                              <span className="font-bold shrink-0">S/N {item.sn}</span>
+                              <span className="text-red-300">|</span>
+                              <span>{item.clientName}</span>
+                              <span className="text-red-300">|</span>
+                              <span className="text-red-500">{item.partDate}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="text-xs text-red-400">삭제 후보 없음</p>}
+                      <p className="text-xs text-red-400 mt-2 border-t border-red-200 pt-1">* 이번 FCST에 미포함 — 직접 확인 후 삭제 여부 판단</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {results.length > 0 && (
                 <div className="bg-white rounded-xl shadow border overflow-hidden">
                   <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                    <h3 className="font-bold flex items-center gap-2 text-gray-800">
-                      <FileSpreadsheet className="w-5 h-5 text-gray-500" /> 병합 결과 확인
-                      <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded ml-2">파란색 배경이 새로 추가된 데이터입니다</span>
-                    </h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold flex items-center gap-2 text-gray-800">
+                        <FileSpreadsheet className="w-5 h-5 text-gray-500" /> 병합 결과 확인
+                      </h3>
+                      <div className="flex gap-2 text-xs">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-bold">■ 신규</span>
+                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded font-bold">■ 납기변경</span>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">□ 기존</span>
+                      </div>
+                    </div>
                     <button onClick={downloadExcel} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
                       <Download className="w-4 h-4" /> 엑셀 다운로드
                     </button>
@@ -703,18 +838,22 @@ export default function App() {
                       <tbody className="divide-y divide-gray-200">
                         {results.map((row, i) => {
                           let rowClass = 'bg-white';
-                          if (row._isNew) {
+                          const status = row._status;
+                          if (status === '신규') {
                             rowClass = 'bg-blue-50/70';
                             if (row['비고'] && row['비고'].includes('CAPA초과')) rowClass = 'bg-orange-50';
-                            if (row['비고'] && row['비고'].includes('없음')) rowClass = 'bg-red-50';
+                            if (row['비고'] && row['비고'].includes('ATM없음')) rowClass = 'bg-red-50';
+                          } else if (status === '납기변경') {
+                            rowClass = 'bg-amber-50';
                           }
                           return (
-                            <tr key={i} className={`hover:bg-gray-50 transition-colors ${rowClass}`}>
+                            <tr key={i} className={`hover:brightness-95 transition-all ${rowClass}`}>
                               {getHeaders().map((key, j) => {
                                 let tdClass = "px-4 py-2 whitespace-nowrap text-gray-700";
                                 if (key === '비고') {
                                   if (row[key] && row[key].includes('CAPA초과')) tdClass += " text-orange-600 font-bold";
                                   if (row[key] && row[key].includes('ATM없음')) tdClass += " text-red-600 font-bold";
+                                  if (row[key] && row[key].includes('납기변경')) tdClass += " text-amber-700 font-bold";
                                 }
                                 return <td key={j} className={tdClass}>{row[key] || '-'}</td>;
                               })}
