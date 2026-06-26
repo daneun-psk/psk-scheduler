@@ -380,6 +380,34 @@ export default function App() {
     return m ? m[1] : '-';
   };
 
+  const applyLotChange = (sn, suggestedLotId) => {
+    const allLots = [
+      ...mappingRules.atmMaster,
+      ...(mappingRules.vacGeneralMaster || []),
+      ...(mappingRules.vacDecMaster || []),
+    ];
+    const newLot = allLots.find(l => l.id === suggestedLotId);
+    if (!newLot) return;
+
+    setResults(prev => prev.map(row => {
+      const rowSN = extractSN(row['비고']);
+      if (rowSN !== sn) return row;
+      const currentLotId = row['배정 LOT'] || row['배정LOT'];
+      const prevBigo = row['비고'] || '';
+      return {
+        ...row,
+        '배정 LOT': suggestedLotId,
+        '생산완료일': newLot.prodDate,
+        '출하가능일': newLot.shipDate,
+        '비고': prevBigo + ` [LOT변경:${currentLotId}→${suggestedLotId}]`,
+        _status: row._status === '납기변경' ? '납기변경' : '재배정',
+      };
+    }));
+
+    // 적용 후 최적화 결과 초기화 (재실행 유도)
+    setOptimizationResult(null);
+  };
+
   const runOptimization = () => {
     if (results.length === 0) return;
 
@@ -388,6 +416,9 @@ export default function App() {
       ...(mappingRules.vacGeneralMaster || []),
       ...(mappingRules.vacDecMaster || []),
     ];
+
+    // 납기변경된 S/N 집합
+    const changedSNSet = new Set((analysisResult?.changedItems || []).map(c => c.sn));
 
     // 현재 LOT 부하 집계
     const loadMap = {};
@@ -428,10 +459,12 @@ export default function App() {
         const currentLot = pool.find(l => l.id === currentLotId);
         const currentShipObj = currentLot ? new Date(currentLot.shipDate) : null;
 
+        const isDateChanged = changedSNSet.has(sn);
+
         // 현재 LOT 자체가 납기 초과인지 확인
         if (currentShipObj && currentShipObj > reqDateObj) {
           return {
-            type: 'invalid', sn, currentLotId, reqDate,
+            type: 'invalid', sn, currentLotId, reqDate, isDateChanged,
             currentShipDate: currentLot.shipDate,
             msg: `출하일(${currentLot.shipDate}) > 납기(${reqDate})`
           };
@@ -446,7 +479,7 @@ export default function App() {
         });
 
         if (eligible.length === 0) {
-          return { type: 'invalid', sn, currentLotId, reqDate, msg: '가용 LOT 없음' };
+          return { type: 'invalid', sn, currentLotId, reqDate, isDateChanged, msg: '가용 LOT 없음' };
         }
 
         // 최적 LOT = shipDate가 납기에 가장 가까운 것
@@ -464,25 +497,27 @@ export default function App() {
             suggestedLotId: optimalLot.id,
             currentGap, optimalGap,
             gapReduction: (currentGap ?? 0) - optimalGap,
-            reqDate,
+            reqDate, isDateChanged,
           };
         }
 
-        return { type: 'optimal', sn, currentLotId, currentGap, reqDate };
+        return { type: 'optimal', sn, currentLotId, currentGap, reqDate, isDateChanged };
       });
 
       return {
         key, clientName, modelName, items: itemResults,
         invalidCount: itemResults.filter(r => r.type === 'invalid').length,
         improveCount: itemResults.filter(r => r.type === 'improve').length,
+        dateChangeCount: itemResults.filter(r => r.isDateChanged && r.type !== 'optimal').length,
         optimalCount: itemResults.filter(r => r.type === 'optimal').length,
       };
-    }).sort((a, b) => (b.invalidCount * 100 + b.improveCount) - (a.invalidCount * 100 + a.improveCount));
+    }).sort((a, b) => (b.invalidCount * 100 + b.dateChangeCount * 10 + b.improveCount) - (a.invalidCount * 100 + a.dateChangeCount * 10 + a.improveCount));
 
     setOptimizationResult({
       groups: groupResults,
       totalInvalid: groupResults.reduce((s, g) => s + g.invalidCount, 0),
       totalImprovable: groupResults.reduce((s, g) => s + g.improveCount, 0),
+      totalDateChange: groupResults.reduce((s, g) => s + g.dateChangeCount, 0),
       totalOptimal: groupResults.reduce((s, g) => s + g.optimalCount, 0),
     });
     setExpandedGroups({});
@@ -949,6 +984,10 @@ export default function App() {
                         <span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
                         납기불가 {optimizationResult.totalInvalid}건
                       </span>
+                      <span className="flex items-center gap-1 text-orange-300 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
+                        납기변경→LOT재검토 {optimizationResult.totalDateChange}건
+                      </span>
                       <span className="flex items-center gap-1 text-yellow-300 font-bold">
                         <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
                         개선가능 {optimizationResult.totalImprovable}건
@@ -981,14 +1020,19 @@ export default function App() {
                                 납기불가 {group.invalidCount}
                               </span>
                             )}
+                            {group.dateChangeCount > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-orange-100 text-orange-800 rounded-full font-bold">
+                                🔄 납기변경 {group.dateChangeCount}
+                              </span>
+                            )}
                             {group.improveCount > 0 && (
                               <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full font-bold">
-                                개선가능 {group.improveCount}
+                                ⚡ 개선가능 {group.improveCount}
                               </span>
                             )}
                             {group.optimalCount > 0 && (
                               <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-bold">
-                                최적 {group.optimalCount}
+                                ✅ 최적 {group.optimalCount}
                               </span>
                             )}
                             <span className="text-gray-400 text-xs ml-2">{expandedGroups[group.key] ? '▲' : '▼'}</span>
@@ -1006,56 +1050,71 @@ export default function App() {
                               <span className="col-span-2">현재 LOT</span>
                               <span className="col-span-1 text-center">→</span>
                               <span className="col-span-2">제안 LOT</span>
-                              <span className="col-span-2 text-right">Gap 변화</span>
+                              <span className="col-span-1 text-right">Gap</span>
+                              <span className="col-span-1 text-right">적용</span>
                             </div>
-                            {group.items.map((r, i) => (
-                              <div
-                                key={i}
-                                className={`grid grid-cols-12 text-xs items-center px-3 py-2 rounded-lg border ${
-                                  r.type === 'invalid' ? 'bg-red-50 border-red-200' :
-                                  r.type === 'improve' ? 'bg-yellow-50 border-yellow-200' :
-                                  'bg-white border-gray-100'
-                                }`}
-                              >
-                                {/* 상태 아이콘 */}
-                                <span className="col-span-1 font-bold">
-                                  {r.type === 'invalid' && <span className="text-red-600">❌</span>}
-                                  {r.type === 'improve' && <span className="text-yellow-600">⚡</span>}
-                                  {r.type === 'optimal' && <span className="text-green-600">✅</span>}
-                                </span>
-                                {/* S/N */}
-                                <span className="col-span-2 font-mono text-gray-700 font-bold">{r.sn}</span>
-                                {/* 납기일 */}
-                                <span className="col-span-2 text-gray-600">{r.reqDate}</span>
-                                {/* 현재 LOT */}
-                                <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
-                                  {r.currentLotId}
-                                </span>
-                                {/* 화살표 */}
-                                <span className="col-span-1 text-center text-gray-400">
-                                  {r.type === 'improve' || r.type === 'invalid' ? '→' : ''}
-                                </span>
-                                {/* 제안 LOT / 메시지 */}
-                                <span className="col-span-2 font-bold text-indigo-700">
-                                  {r.type === 'improve' ? r.suggestedLotId : ''}
-                                  {r.type === 'invalid' ? <span className="text-red-600 text-xs not-italic normal-case">{r.msg}</span> : ''}
-                                </span>
-                                {/* Gap 변화 */}
-                                <span className="col-span-2 text-right">
-                                  {r.type === 'improve' && (
-                                    <span className="text-green-700 font-bold">
-                                      {r.currentGap}일 → {r.optimalGap}일
-                                      <span className="ml-1 text-green-600 bg-green-100 px-1 rounded">
-                                        -{r.gapReduction}일
+                            {group.items.map((r, i) => {
+                              const isDateChanged = r.isDateChanged;
+                              const rowBg =
+                                r.type === 'invalid' ? 'bg-red-50 border-red-200' :
+                                isDateChanged ? 'bg-orange-50 border-orange-300' :
+                                r.type === 'improve' ? 'bg-yellow-50 border-yellow-200' :
+                                'bg-white border-gray-100';
+                              return (
+                                <div key={i} className={`grid grid-cols-12 text-xs items-center px-3 py-2 rounded-lg border ${rowBg}`}>
+                                  {/* 상태 아이콘 */}
+                                  <span className="col-span-1 font-bold flex items-center gap-1">
+                                    {r.type === 'invalid' && <span>❌</span>}
+                                    {r.type === 'improve' && !isDateChanged && <span>⚡</span>}
+                                    {r.type === 'improve' && isDateChanged && <span title="납기변경으로 LOT 재검토 필요">🔄</span>}
+                                    {r.type === 'optimal' && !isDateChanged && <span>✅</span>}
+                                    {r.type === 'optimal' && isDateChanged && <span title="납기변경됐지만 현재 LOT 유지 가능">🔄✅</span>}
+                                  </span>
+                                  {/* S/N */}
+                                  <span className="col-span-2 font-mono text-gray-700 font-bold">{r.sn}</span>
+                                  {/* 납기일 */}
+                                  <span className={`col-span-2 ${isDateChanged ? 'text-orange-700 font-bold' : 'text-gray-600'}`}>
+                                    {r.reqDate}
+                                    {isDateChanged && <span className="ml-1 text-orange-500 text-[10px]">변경</span>}
+                                  </span>
+                                  {/* 현재 LOT */}
+                                  <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
+                                    {r.currentLotId}
+                                  </span>
+                                  {/* 화살표 */}
+                                  <span className="col-span-1 text-center text-gray-400">
+                                    {(r.type === 'improve' || r.type === 'invalid') ? '→' : ''}
+                                  </span>
+                                  {/* 제안 LOT / 메시지 */}
+                                  <span className="col-span-2 font-bold text-indigo-700">
+                                    {r.type === 'improve' ? r.suggestedLotId : ''}
+                                    {r.type === 'invalid' ? <span className="text-red-600 font-normal">{r.msg}</span> : ''}
+                                  </span>
+                                  {/* Gap */}
+                                  <span className="col-span-1 text-right">
+                                    {r.type === 'improve' && (
+                                      <span className="text-green-700 font-bold text-[10px]">
+                                        {r.currentGap}→{r.optimalGap}일
                                       </span>
-                                    </span>
-                                  )}
-                                  {r.type === 'optimal' && (
-                                    <span className="text-gray-500">{r.currentGap}일</span>
-                                  )}
-                                </span>
-                              </div>
-                            ))}
+                                    )}
+                                    {r.type === 'optimal' && (
+                                      <span className="text-gray-500">{r.currentGap}일</span>
+                                    )}
+                                  </span>
+                                  {/* 적용 버튼 */}
+                                  <span className="col-span-1 text-right">
+                                    {r.type === 'improve' && (
+                                      <button
+                                        onClick={() => applyLotChange(r.sn, r.suggestedLotId)}
+                                        className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] rounded font-bold transition-colors"
+                                      >
+                                        적용
+                                      </button>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
