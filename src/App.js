@@ -12,6 +12,8 @@ export default function App() {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [optimizationResult, setOptimizationResult] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   const defaultRules = {
     lineMap: {
@@ -366,8 +368,121 @@ export default function App() {
   const getHeaders = () => {
     if (results.length === 0) return [];
     const headerSet = new Set();
-    results.forEach(row => { Object.keys(row).forEach(key => { if (key !== '_isNew') headerSet.add(key); }); });
+    results.forEach(row => { Object.keys(row).forEach(key => { if (key !== '_isNew' && key !== '_status') headerSet.add(key); }); });
     return Array.from(headerSet);
+  };
+
+  const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const extractSN = (bigo) => {
+    const m = (bigo || '').match(/\[S\/N:([^\]]+)\]/);
+    return m ? m[1] : '-';
+  };
+
+  const runOptimization = () => {
+    if (results.length === 0) return;
+
+    const allLots = [
+      ...mappingRules.atmMaster,
+      ...(mappingRules.vacGeneralMaster || []),
+      ...(mappingRules.vacDecMaster || []),
+    ];
+
+    // 현재 LOT 부하 집계
+    const loadMap = {};
+    allLots.forEach(lot => { loadMap[lot.id] = { used: 0, maxCapa: lot.maxCapa, shipDate: lot.shipDate }; });
+    results.forEach(row => {
+      const lotId = row['배정 LOT'] || row['배정LOT'];
+      if (lotId && loadMap[lotId]) loadMap[lotId].used++;
+    });
+
+    // (고객사, 모델) 그룹화 — 배정 LOT + 납품일 있는 것만
+    const groups = {};
+    results.forEach((row) => {
+      const lotId = row['배정 LOT'] || row['배정LOT'];
+      const reqDate = row['납품일'];
+      if (!lotId || !reqDate || lotId === '-' || lotId === '' || lotId === '미배정') return;
+      const key = `${row['고객사'] || ''}||${row['모델'] || ''}`;
+      if (!groups[key]) groups[key] = { clientName: row['고객사'] || '', modelName: row['모델'] || '', items: [] };
+      groups[key].items.push(row);
+    });
+
+    // 그룹별 분석
+    const groupResults = Object.entries(groups).map(([key, { clientName, modelName, items }]) => {
+      const itemResults = items.map(item => {
+        const currentLotId = item['배정 LOT'] || item['배정LOT'];
+        const reqDate = item['납품일'];
+        const reqDateObj = new Date(reqDate);
+        const sn = extractSN(item['비고']);
+
+        // LOT 풀 결정
+        let pool;
+        if (currentLotId.startsWith('ATM-')) pool = mappingRules.atmMaster;
+        else if (currentLotId.startsWith('VAC-')) pool = mappingRules.vacGeneralMaster || [];
+        else if (currentLotId.startsWith('DEC-')) pool = mappingRules.vacDecMaster || [];
+        else return { type: 'unknown', sn, currentLotId, reqDate };
+
+        const currentLot = pool.find(l => l.id === currentLotId);
+        const currentShipObj = currentLot ? new Date(currentLot.shipDate) : null;
+
+        // 현재 LOT 자체가 납기 초과인지 확인
+        if (currentShipObj && currentShipObj > reqDateObj) {
+          return {
+            type: 'invalid', sn, currentLotId, reqDate,
+            currentShipDate: currentLot.shipDate,
+            msg: `출하일(${currentLot.shipDate}) > 납기(${reqDate})`
+          };
+        }
+
+        // 가능한 LOT 목록: shipDate ≤ 납기 AND (현재 LOT이거나 CAPA 여유)
+        const eligible = pool.filter(lot => {
+          const shipObj = new Date(lot.shipDate);
+          const isCurrent = lot.id === currentLotId;
+          const hasRoom = loadMap[lot.id] && (isCurrent || loadMap[lot.id].used < lot.maxCapa);
+          return shipObj <= reqDateObj && hasRoom;
+        });
+
+        if (eligible.length === 0) {
+          return { type: 'invalid', sn, currentLotId, reqDate, msg: '가용 LOT 없음' };
+        }
+
+        // 최적 LOT = shipDate가 납기에 가장 가까운 것
+        const optimalLot = eligible.reduce((best, lot) =>
+          new Date(lot.shipDate) > new Date(best.shipDate) ? lot : best
+        );
+
+        const currentGap = currentShipObj
+          ? Math.floor((reqDateObj - currentShipObj) / 86400000) : null;
+        const optimalGap = Math.floor((reqDateObj - new Date(optimalLot.shipDate)) / 86400000);
+
+        if (optimalLot.id !== currentLotId) {
+          return {
+            type: 'improve', sn, currentLotId,
+            suggestedLotId: optimalLot.id,
+            currentGap, optimalGap,
+            gapReduction: (currentGap ?? 0) - optimalGap,
+            reqDate,
+          };
+        }
+
+        return { type: 'optimal', sn, currentLotId, currentGap, reqDate };
+      });
+
+      return {
+        key, clientName, modelName, items: itemResults,
+        invalidCount: itemResults.filter(r => r.type === 'invalid').length,
+        improveCount: itemResults.filter(r => r.type === 'improve').length,
+        optimalCount: itemResults.filter(r => r.type === 'optimal').length,
+      };
+    }).sort((a, b) => (b.invalidCount * 100 + b.improveCount) - (a.invalidCount * 100 + a.improveCount));
+
+    setOptimizationResult({
+      groups: groupResults,
+      totalInvalid: groupResults.reduce((s, g) => s + g.invalidCount, 0),
+      totalImprovable: groupResults.reduce((s, g) => s + g.improveCount, 0),
+      totalOptimal: groupResults.reduce((s, g) => s + g.optimalCount, 0),
+    });
+    setExpandedGroups({});
   };
 
   const downloadExcel = async () => {
@@ -727,10 +842,15 @@ export default function App() {
                   <textarea className="w-full h-48 border border-gray-200 rounded-lg bg-gray-50 p-4 text-xs resize-none focus:ring-2 focus:ring-green-500 outline-none" placeholder="기존에 관리하던 SOMP 엑셀 데이터를 헤더 포함해서 붙여넣으세요..." onChange={(e) => setSompInput(e.target.value)} value={sompInput} />
                 </div>
               </div>
-              <div className="flex justify-center py-2">
+              <div className="flex justify-center gap-4 py-2">
                 <button onClick={processData} disabled={status.type === 'loading'} className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-lg font-bold text-white flex items-center gap-2 shadow-md">
-                  {status.type === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />} 데이터 스캔 및 하단에 추가하기
+                  {status.type === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />} 데이터 스캔 및 분석
                 </button>
+                {results.length > 0 && (
+                  <button onClick={runOptimization} className="px-8 py-3 bg-indigo-700 hover:bg-indigo-800 rounded-lg font-bold text-white flex items-center gap-2 shadow-md">
+                    <AlertCircle className="w-5 h-5" /> LOT 최적화 분석
+                  </button>
+                )}
               </div>
               {status.message && status.type !== 'loading' && (
                 <div className={`p-4 rounded-lg font-bold text-center border ${status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>{status.message}</div>
@@ -809,6 +929,137 @@ export default function App() {
                       ) : <p className="text-xs text-red-400">삭제 후보 없음</p>}
                       <p className="text-xs text-red-400 mt-2 border-t border-red-200 pt-1">* 이번 FCST에 미포함 — 직접 확인 후 삭제 여부 판단</p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── LOT 최적화 분석 패널 ── */}
+              {optimizationResult && (
+                <div className="bg-white rounded-xl shadow border overflow-hidden">
+                  {/* 요약 헤더 */}
+                  <div className="px-6 py-4 bg-indigo-900 flex items-center justify-between">
+                    <span className="font-bold text-white flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-yellow-300" /> LOT 최적화 분석 결과
+                    </span>
+                    <div className="flex gap-4 text-sm">
+                      <span className="flex items-center gap-1 text-red-300 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
+                        납기불가 {optimizationResult.totalInvalid}건
+                      </span>
+                      <span className="flex items-center gap-1 text-yellow-300 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+                        개선가능 {optimizationResult.totalImprovable}건
+                      </span>
+                      <span className="flex items-center gap-1 text-green-300 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                        최적 {optimizationResult.totalOptimal}건
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 그룹별 상세 */}
+                  <div className="divide-y">
+                    {optimizationResult.groups.map((group) => (
+                      <div key={group.key}>
+                        {/* 그룹 헤더 (클릭으로 열기) */}
+                        <button
+                          onClick={() => toggleGroup(group.key)}
+                          className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-gray-800">{group.clientName}</span>
+                            <span className="text-gray-400 text-xs">×</span>
+                            <span className="text-sm font-bold text-indigo-700">{group.modelName}</span>
+                            <span className="text-xs text-gray-400">({group.items.length}건)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {group.invalidCount > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-bold">
+                                납기불가 {group.invalidCount}
+                              </span>
+                            )}
+                            {group.improveCount > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full font-bold">
+                                개선가능 {group.improveCount}
+                              </span>
+                            )}
+                            {group.optimalCount > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-bold">
+                                최적 {group.optimalCount}
+                              </span>
+                            )}
+                            <span className="text-gray-400 text-xs ml-2">{expandedGroups[group.key] ? '▲' : '▼'}</span>
+                          </div>
+                        </button>
+
+                        {/* 그룹 상세 항목 */}
+                        {expandedGroups[group.key] && (
+                          <div className="bg-gray-50 px-6 py-3 space-y-2">
+                            {/* 컬럼 헤더 */}
+                            <div className="grid grid-cols-12 text-xs font-bold text-gray-500 px-3 pb-1 border-b border-gray-200">
+                              <span className="col-span-1">상태</span>
+                              <span className="col-span-2">S/N</span>
+                              <span className="col-span-2">납기일</span>
+                              <span className="col-span-2">현재 LOT</span>
+                              <span className="col-span-1 text-center">→</span>
+                              <span className="col-span-2">제안 LOT</span>
+                              <span className="col-span-2 text-right">Gap 변화</span>
+                            </div>
+                            {group.items.map((r, i) => (
+                              <div
+                                key={i}
+                                className={`grid grid-cols-12 text-xs items-center px-3 py-2 rounded-lg border ${
+                                  r.type === 'invalid' ? 'bg-red-50 border-red-200' :
+                                  r.type === 'improve' ? 'bg-yellow-50 border-yellow-200' :
+                                  'bg-white border-gray-100'
+                                }`}
+                              >
+                                {/* 상태 아이콘 */}
+                                <span className="col-span-1 font-bold">
+                                  {r.type === 'invalid' && <span className="text-red-600">❌</span>}
+                                  {r.type === 'improve' && <span className="text-yellow-600">⚡</span>}
+                                  {r.type === 'optimal' && <span className="text-green-600">✅</span>}
+                                </span>
+                                {/* S/N */}
+                                <span className="col-span-2 font-mono text-gray-700 font-bold">{r.sn}</span>
+                                {/* 납기일 */}
+                                <span className="col-span-2 text-gray-600">{r.reqDate}</span>
+                                {/* 현재 LOT */}
+                                <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
+                                  {r.currentLotId}
+                                </span>
+                                {/* 화살표 */}
+                                <span className="col-span-1 text-center text-gray-400">
+                                  {r.type === 'improve' || r.type === 'invalid' ? '→' : ''}
+                                </span>
+                                {/* 제안 LOT / 메시지 */}
+                                <span className="col-span-2 font-bold text-indigo-700">
+                                  {r.type === 'improve' ? r.suggestedLotId : ''}
+                                  {r.type === 'invalid' ? <span className="text-red-600 text-xs not-italic normal-case">{r.msg}</span> : ''}
+                                </span>
+                                {/* Gap 변화 */}
+                                <span className="col-span-2 text-right">
+                                  {r.type === 'improve' && (
+                                    <span className="text-green-700 font-bold">
+                                      {r.currentGap}일 → {r.optimalGap}일
+                                      <span className="ml-1 text-green-600 bg-green-100 px-1 rounded">
+                                        -{r.gapReduction}일
+                                      </span>
+                                    </span>
+                                  )}
+                                  {r.type === 'optimal' && (
+                                    <span className="text-gray-500">{r.currentGap}일</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-400">
+                    * 제안은 참고용입니다. 같은 고객사+모델 범위 내에서만 검토된 결과이며, 실제 변경은 직접 확인 후 적용하세요.
                   </div>
                 </div>
               )}
