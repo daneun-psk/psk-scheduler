@@ -375,6 +375,45 @@ export default function App() {
 
   const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
 
+  const [expandedCapaLots, setExpandedCapaLots] = useState({});
+  const toggleCapaLot = (lotId) => setExpandedCapaLots(prev => ({ ...prev, [lotId]: !prev[lotId] }));
+
+  const computeCapaIssues = () => {
+    if (results.length === 0) return [];
+    const allLots = [
+      ...mappingRules.atmMaster,
+      ...(mappingRules.vacGeneralMaster || []),
+      ...(mappingRules.vacDecMaster || []),
+    ];
+    const lotMap = {};
+    allLots.forEach(lot => { lotMap[lot.id] = { ...lot, items: [] }; });
+
+    results.forEach(row => {
+      const lotId = row['배정 LOT'] || row['배정LOT'];
+      if (lotId && lotMap[lotId]) lotMap[lotId].items.push(row);
+    });
+
+    return Object.values(lotMap)
+      .filter(lot => lot.items.length > lot.maxCapa)
+      .map(lot => ({
+        lotId: lot.id,
+        shipDate: lot.shipDate,
+        maxCapa: lot.maxCapa,
+        used: lot.items.length,
+        overCount: lot.items.length - lot.maxCapa,
+        items: lot.items.map(item => ({
+          clientName: item['고객사'] || '-',
+          model: item['모델'] || '-',
+          reqDate: item['납품일'] || '-',
+          sn: extractSN(item['비고']),
+          gap: (lot.shipDate && item['납품일'])
+            ? Math.floor((new Date(item['납품일']) - new Date(lot.shipDate)) / 86400000)
+            : null,
+        })).sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0)),
+      }))
+      .sort((a, b) => b.overCount - a.overCount);
+  };
+
   const extractSN = (bigo) => {
     const m = (bigo || '').match(/\[S\/N:([^\]]+)\]/);
     return m ? m[1] : '-';
@@ -971,6 +1010,91 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* ── CAPA 초과 현황판 ── */}
+              {results.length > 0 && (() => {
+                const capaIssues = computeCapaIssues();
+                if (capaIssues.length === 0) return null;
+                const totalOver = capaIssues.reduce((s, l) => s + l.overCount, 0);
+                return (
+                  <div className="bg-white rounded-xl shadow border border-orange-200 overflow-hidden">
+                    <div className="px-6 py-3 bg-orange-600 flex items-center justify-between">
+                      <span className="font-bold text-white flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-orange-200" />
+                        CAPA 초과 현황
+                      </span>
+                      <div className="flex gap-4 text-sm text-orange-100">
+                        <span>초과 LOT <span className="font-black text-white">{capaIssues.length}</span>개</span>
+                        <span>총 초과 <span className="font-black text-white">{totalOver}</span>건</span>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-orange-100">
+                      {capaIssues.map(lot => (
+                        <div key={lot.lotId}>
+                          {/* LOT 헤더 */}
+                          <button
+                            onClick={() => toggleCapaLot(lot.lotId)}
+                            className="w-full px-6 py-3 flex items-center justify-between hover:bg-orange-50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-black text-orange-700 text-sm">{lot.lotId}</span>
+                              <span className="text-xs text-gray-500">출하가능일 {lot.shipDate}</span>
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full font-bold">
+                                {lot.used}/{lot.maxCapa} — 초과 {lot.overCount}건
+                              </span>
+                            </div>
+                            <span className="text-gray-400 text-xs">{expandedCapaLots[lot.lotId] ? '▲' : '▼'}</span>
+                          </button>
+
+                          {/* 배정 항목 목록 */}
+                          {expandedCapaLots[lot.lotId] && (
+                            <div className="bg-orange-50 px-6 py-3">
+                              {/* 컬럼 헤더 */}
+                              <div className="grid grid-cols-12 text-xs font-bold text-gray-500 px-3 pb-1 border-b border-orange-200 mb-2">
+                                <span className="col-span-1">#</span>
+                                <span className="col-span-2">S/N</span>
+                                <span className="col-span-3">고객사</span>
+                                <span className="col-span-3">모델</span>
+                                <span className="col-span-2">납품일</span>
+                                <span className="col-span-1 text-right">Gap</span>
+                              </div>
+                              {lot.items.map((item, idx) => {
+                                const isOver = idx >= lot.maxCapa;
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`grid grid-cols-12 text-xs items-center px-3 py-1.5 rounded mb-1 ${
+                                      isOver ? 'bg-red-100 border border-red-300' : 'bg-white border border-gray-100'
+                                    }`}
+                                  >
+                                    <span className={`col-span-1 font-bold ${isOver ? 'text-red-600' : 'text-gray-400'}`}>
+                                      {idx + 1}{isOver && ' ⚠'}
+                                    </span>
+                                    <span className="col-span-2 font-mono text-gray-700">{item.sn}</span>
+                                    <span className="col-span-3 text-gray-700">{item.clientName}</span>
+                                    <span className="col-span-3 text-gray-700">{item.model}</span>
+                                    <span className="col-span-2 text-gray-600">{item.reqDate}</span>
+                                    <span className={`col-span-1 text-right font-bold ${
+                                      item.gap === 0 ? 'text-red-600' :
+                                      item.gap <= 7 ? 'text-orange-600' : 'text-green-700'
+                                    }`}>
+                                      {item.gap !== null ? `${item.gap}일` : '-'}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                              <p className="text-xs text-orange-500 mt-2">
+                                * gap이 큰 항목(초록)이 다른 LOT 재배정 우선 검토 대상
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── LOT 최적화 분석 패널 ── */}
               {optimizationResult && (
