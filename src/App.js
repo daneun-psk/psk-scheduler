@@ -524,14 +524,6 @@ export default function App() {
 
         const currentShipDate = currentLot?.shipDate || '';
 
-        // 현재 LOT 자체가 납기 초과인지 확인
-        if (currentShipObj && currentShipObj > reqDateObj) {
-          return {
-            type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
-            msg: `출하일(${currentShipDate}) > 납기(${reqDate})`
-          };
-        }
-
         // 가능한 LOT 목록: shipDate ≤ 납기 AND (현재 LOT이거나 CAPA 여유)
         const eligible = pool.filter(lot => {
           const shipObj = new Date(lot.shipDate);
@@ -539,6 +531,28 @@ export default function App() {
           const hasRoom = loadMap[lot.id] && (isCurrent || loadMap[lot.id].used < lot.maxCapa);
           return shipObj <= reqDateObj && hasRoom;
         });
+
+        // 현재 LOT 자체가 납기 초과 → 다른 LOT으로 대안 탐색
+        if (currentShipObj && currentShipObj > reqDateObj) {
+          const altEligible = eligible.filter(lot => lot.id !== currentLotId);
+          if (altEligible.length > 0) {
+            const altLot = altEligible.reduce((best, lot) =>
+              new Date(lot.shipDate) > new Date(best.shipDate) ? lot : best
+            );
+            const altGap = Math.floor((reqDateObj - new Date(altLot.shipDate)) / 86400000);
+            return {
+              type: 'improve', sn, currentLotId, currentShipDate,
+              suggestedLotId: altLot.id, suggestedShipDate: altLot.shipDate,
+              currentGap: null, optimalGap: altGap, gapReduction: null,
+              reqDate, isDateChanged,
+              msg: `현 LOT 납기초과 → ${altLot.id} 재배정 필요`,
+            };
+          }
+          return {
+            type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
+            msg: `출하일(${currentShipDate}) > 납기(${reqDate}) — 대안 LOT 없음`
+          };
+        }
 
         if (eligible.length === 0) {
           return { type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged, msg: '가용 LOT 없음' };
