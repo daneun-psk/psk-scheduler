@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  FileSpreadsheet, Bot, Play, Download, AlertCircle, CheckCircle2, 
-  CalendarDays, ClipboardPaste, Loader2, Database, Building2, Cpu, 
+import {
+  FileSpreadsheet, Bot, Play, Download, AlertCircle, CheckCircle2,
+  CalendarDays, ClipboardPaste, Loader2, Database, Building2, Cpu,
   CalendarClock, Plus, Trash2, Save, Edit, X, Search, Upload, Layers
 } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('master'); // 확인하기 쉽게 초기탭을 마스터로 변경
+  const [activeTab, setActiveTab] = useState('master');
   const [fcstInput, setFcstInput] = useState('');
   const [sompInput, setSompInput] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
 
-  // 💡 올려주신 이미지 데이터 일부를 초기값으로 미리 입력해두었습니다. (년도는 2026년으로 세팅)
   const defaultRules = {
-    lineMap: { 
+    lineMap: {
       'T1': 'SEC-T1(USA)', 'P1D': 'SEC-P1(D)(KR)', 'P1F': 'SEC-P1(F)(KR)',
       'P2D': 'SEC-P2(D)(KR)', 'P2F': 'SEC-P2(F)(KR)', 'P3F': 'SEC-P3(F)(KR)',
       'P4D': 'SEC-P4(D)(KR)', 'P4H': 'SEC-P4(H)(KR)', 'X2': 'SEC-X2L(CN)'
@@ -26,8 +25,8 @@ export default function App() {
       'SEC-P4(D)(KR)': 'Samsung Electronics', 'SEC-P4(H)(KR)': 'Samsung Electronics',
       'SEC-X2L(CN)': 'Samsung Electronics'
     },
-    modelMap: { 
-      'SUPRA-N-M': { model: 'SUPRA Nm (J)', pm: 0 }, 
+    modelMap: {
+      'SUPRA-N-M': { model: 'SUPRA Nm (J)', pm: 0 },
       'SUPRA-N': { model: 'SUPRA N', pm: 0 }
     },
     atmMaster: [
@@ -72,7 +71,7 @@ export default function App() {
       { id: 'ATM-139', partDate: '2026-12-09', prodDate: '2026-12-28', shipDate: '2026-12-29', maxCapa: 6 },
       { id: 'ATM-140', partDate: '2026-12-17', prodDate: '2027-01-06', shipDate: '2027-01-07', maxCapa: 6 }
     ],
-    vacMaster: [
+    vacGeneralMaster: [
       { id: 'VAC-201', partDate: '2026-01-06', prodDate: '2026-01-30', shipDate: '2026-02-02', maxCapa: 4 },
       { id: 'VAC-202', partDate: '2026-01-19', prodDate: '2026-02-12', shipDate: '2026-02-13', maxCapa: 4 },
       { id: 'VAC-203', partDate: '2026-01-30', prodDate: '2026-03-03', shipDate: '2026-03-04', maxCapa: 4 },
@@ -99,18 +98,41 @@ export default function App() {
       { id: 'VAC-224', partDate: '2026-11-10', prodDate: '2026-12-04', shipDate: '2026-12-07', maxCapa: 4 },
       { id: 'VAC-225', partDate: '2026-11-23', prodDate: '2026-12-17', shipDate: '2026-12-18', maxCapa: 4 },
       { id: 'VAC-226', partDate: '2026-12-04', prodDate: '2026-12-31', shipDate: '2027-01-04', maxCapa: 4 }
+    ],
+    vacDecMaster: [
+      { id: 'DEC-201', partDate: '2026-01-06', prodDate: '2026-02-23', shipDate: '2026-02-24', maxCapa: 4 },
+      { id: 'DEC-203', partDate: '2026-01-30', prodDate: '2026-03-20', shipDate: '2026-03-23', maxCapa: 4 },
+      { id: 'DEC-205', partDate: '2026-03-03', prodDate: '2026-04-15', shipDate: '2026-04-16', maxCapa: 4 },
+      { id: 'DEC-207', partDate: '2026-03-27', prodDate: '2026-05-13', shipDate: '2026-05-14', maxCapa: 4 },
+      { id: 'DEC-209', partDate: '2026-04-22', prodDate: '2026-06-10', shipDate: '2026-06-11', maxCapa: 4 },
+      { id: 'DEC-211', partDate: '2026-05-20', prodDate: '2026-07-06', shipDate: '2026-07-07', maxCapa: 4 },
+      { id: 'DEC-213', partDate: '2026-06-17', prodDate: '2026-07-30', shipDate: '2026-07-31', maxCapa: 4 },
+      { id: 'DEC-215', partDate: '2026-07-13', prodDate: '2026-08-26', shipDate: '2026-08-27', maxCapa: 4 },
+      { id: 'DEC-217', partDate: '2026-08-06', prodDate: '2026-09-21', shipDate: '2026-09-22', maxCapa: 4 },
+      { id: 'DEC-219', partDate: '2026-09-02', prodDate: '2026-10-21', shipDate: '2026-10-22', maxCapa: 4 },
+      { id: 'DEC-221', partDate: '2026-09-30', prodDate: '2026-11-16', shipDate: '2026-11-17', maxCapa: 4 },
+      { id: 'DEC-223', partDate: '2026-10-28', prodDate: '2026-12-10', shipDate: '2026-12-11', maxCapa: 4 },
+      { id: 'DEC-225', partDate: '2026-11-23', prodDate: '2027-01-07', shipDate: '2027-01-08', maxCapa: 4 }
     ]
   };
 
   const [mappingRules, setMappingRules] = useState(() => {
-    const saved = localStorage.getItem('pskMasterData_v3'); // 스키마 변경으로 키 업데이트
+    const saved = localStorage.getItem('pskMasterData_v4');
     const parsed = saved ? JSON.parse(saved) : null;
-    return parsed ? { ...defaultRules, ...parsed, vacMaster: parsed.vacMaster || defaultRules.vacMaster } : defaultRules;
+    if (parsed) {
+      return {
+        ...defaultRules,
+        ...parsed,
+        vacGeneralMaster: parsed.vacGeneralMaster || defaultRules.vacGeneralMaster,
+        vacDecMaster: parsed.vacDecMaster || defaultRules.vacDecMaster,
+      };
+    }
+    return defaultRules;
   });
 
   const saveRules = (newRules) => {
     setMappingRules(newRules);
-    localStorage.setItem('pskMasterData_v3', JSON.stringify(newRules));
+    localStorage.setItem('pskMasterData_v4', JSON.stringify(newRules));
   };
 
   const showNotification = (msg, type = 'success') => {
@@ -129,7 +151,7 @@ export default function App() {
       try {
         const atmLoad = {};
         mappingRules.atmMaster.forEach(atm => { atmLoad[atm.id] = 0; });
-        
+
         const sompLines = sompInput.trim().split('\n').filter(line => line.trim() !== '');
         const existingData = [];
         let sompHeaders = [];
@@ -141,7 +163,6 @@ export default function App() {
             const rowObj = {};
             sompHeaders.forEach((h, idx) => { rowObj[h] = cols[idx] || ''; });
             existingData.push({ ...rowObj, _isNew: false });
-
             cols.forEach(c => {
               if (c.startsWith('ATM-') && atmLoad[c] !== undefined) atmLoad[c]++;
             });
@@ -152,7 +173,7 @@ export default function App() {
         const processed = [];
         let successCount = 0;
         let failCount = 0;
-        
+
         let fcstHeaderIdx = -1;
         let reqDateIndices = [];
         let qtyIdx = -1;
@@ -176,11 +197,11 @@ export default function App() {
         dataRows.forEach((row) => {
           const cols = row.split('\t').map(c => c.trim());
           const isNew = cols.some(c => c && c.includes('신규'));
-          
+
           if (isNew) {
             const rawLine = Object.keys(mappingRules.lineMap).find(key => cols.includes(key));
             const rawModel = Object.keys(mappingRules.modelMap).find(key => cols.includes(key));
-            
+
             let qty = 1;
             if (qtyIdx !== -1 && cols[qtyIdx]) {
               qty = parseInt(cols[qtyIdx].replace(/[^0-9]/g, '')) || 1;
@@ -194,11 +215,10 @@ export default function App() {
             let isDateChanged = false;
 
             if (reqDateIndices.length > 0) {
-              const currIdx = reqDateIndices[reqDateIndices.length - 1]; 
+              const currIdx = reqDateIndices[reqDateIndices.length - 1];
               rawDate = cols[currIdx] || '';
-
               if (reqDateIndices.length > 1) {
-                const prevIdx = reqDateIndices[0]; 
+                const prevIdx = reqDateIndices[0];
                 prevDateRaw = cols[prevIdx] || '';
                 if (prevDateRaw && rawDate && prevDateRaw !== rawDate) isDateChanged = true;
               }
@@ -215,7 +235,6 @@ export default function App() {
 
             const reqDate = rawDate.replace(/\./g, '-');
             const prevReqDate = prevDateRaw.replace(/\./g, '-');
-
             const fabName = rawLine ? mappingRules.lineMap[rawLine] : '';
             const clientName = fabName ? (mappingRules.fabClientMap[fabName] || '') : '';
             const modelInfo = rawModel ? mappingRules.modelMap[rawModel] : { model: '', pm: '' };
@@ -224,53 +243,44 @@ export default function App() {
 
             let reqDateObj = reqDate ? new Date(reqDate) : null;
 
-            for(let i=0; i<qty; i++) {
-              let assignedAtm = ''; 
-              let prodEndDate = ''; 
-              let shipAvailableDate = ''; 
-              let finalReqDate = reqDate; 
+            for (let i = 0; i < qty; i++) {
+              let assignedAtm = '';
+              let prodEndDate = '';
+              let shipAvailableDate = '';
+              let finalReqDate = reqDate;
               let remarksArr = [];
 
               if (!rawLine) remarksArr.push('라인 미등록');
               if (!rawModel) remarksArr.push('모델 미등록');
               if (!reqDate) remarksArr.push('납품일 누락');
-              
               if (isDateChanged) remarksArr.push(`납기변경(${prevReqDate} ➡️ ${reqDate})`);
 
-              // ATM 배정 매칭 조건 변경: 출하가능일 <= 필요납기 (가장 인접한 일정 찾기)
               if (reqDateObj) {
                 let matchedAtm = null;
                 const targetReqDate = new Date(reqDateObj);
-                targetReqDate.setHours(0, 0, 0, 0); // 시간 오차 무시하고 날짜만 비교
+                targetReqDate.setHours(0, 0, 0, 0);
 
-                // atmMaster는 날짜순으로 오름차순 정렬되어 있으므로, 배열의 뒤에서부터 찾으면
-                // 필요납기보다 빠르면서 가장 가까운(최적의) 출하가능일을 가진 ATM을 바로 찾을 수 있습니다.
                 for (let j = mappingRules.atmMaster.length - 1; j >= 0; j--) {
                   const atm = mappingRules.atmMaster[j];
                   if (!atm.shipDate) continue;
-
                   const shipDateObj = new Date(atm.shipDate);
                   shipDateObj.setHours(0, 0, 0, 0);
-
                   if (shipDateObj <= targetReqDate) {
                     matchedAtm = atm;
-                    break; // 가장 최적의 ATM을 찾았으므로 탐색 종료
+                    break;
                   }
                 }
 
                 if (matchedAtm) {
-                  // 조건 1 & 2: 납기에 맞는 ATM이 있으면 무조건 배정 후 Capa 검증
-                  assignedAtm = matchedAtm.id; 
-                  prodEndDate = matchedAtm.prodDate; 
-                  shipAvailableDate = matchedAtm.shipDate; 
-                  
+                  assignedAtm = matchedAtm.id;
+                  prodEndDate = matchedAtm.prodDate;
+                  shipAvailableDate = matchedAtm.shipDate;
                   const currentLoad = atmLoad[matchedAtm.id] + 1;
-                  if (currentLoad > matchedAtm.maxCapa) { 
-                    remarksArr.push(`CAPA초과 (${currentLoad}/${matchedAtm.maxCapa})`); 
+                  if (currentLoad > matchedAtm.maxCapa) {
+                    remarksArr.push(`CAPA초과 (${currentLoad}/${matchedAtm.maxCapa})`);
                   }
                   atmLoad[matchedAtm.id] = currentLoad;
                 } else {
-                  // 조건 3: 적합한 ATM이 없을 경우 공란 유지 및 비고란 작성
                   remarksArr.push('적합한 ATM없음');
                 }
               }
@@ -278,16 +288,9 @@ export default function App() {
               if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
 
               processed.push({
-                '고객사': clientName, 
-                'FAB': fabName, 
-                'PM': modelInfo.pm, 
-                '모델': modelInfo.model,
-                '배정 LOT': assignedAtm, 
-                '비고': remarksArr.join(', '), 
-                '납품일': finalReqDate, 
-                '생산완료일': prodEndDate, 
-                '출하가능일': shipAvailableDate,
-                '_isNew': true 
+                '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
+                '배정 LOT': assignedAtm, '비고': remarksArr.join(', '), '납품일': finalReqDate,
+                '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true
               });
               successCount++;
             }
@@ -295,7 +298,6 @@ export default function App() {
         });
 
         const combinedResults = [...existingData, ...processed];
-
         if (combinedResults.length === 0) {
           setStatus({ type: 'error', message: '출력할 데이터가 없습니다.' });
         } else {
@@ -311,100 +313,66 @@ export default function App() {
   const getHeaders = () => {
     if (results.length === 0) return [];
     const headerSet = new Set();
-    results.forEach(row => {
-      Object.keys(row).forEach(key => {
-        if (key !== '_isNew') headerSet.add(key);
-      });
-    });
+    results.forEach(row => { Object.keys(row).forEach(key => { if (key !== '_isNew') headerSet.add(key); }); });
     return Array.from(headerSet);
   };
 
   const downloadExcel = async () => {
     if (results.length === 0) return;
-
     setStatus({ type: 'loading', message: '엑셀 파일 생성 중...' });
-
     try {
-      // 동적 임포트: 라이브러리가 없을 때 앱 전체가 강제 종료되는 것을 방지합니다.
-      // 사용 전 반드시 터미널에서 npm install exceljs file-saver 를 실행해야 합니다.
       const ExcelJS = window.ExcelJS;
       const saveAs = window.saveAs;
-
       if (!ExcelJS || !saveAs) throw new Error('CDN 라이브러리 로드 실패');
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('FCST 배정결과');
-
       const headers = getHeaders();
 
-      // 1. 헤더(컬럼) 설정 및 너비 최적화
       worksheet.columns = headers.map(h => ({
-        header: h,
-        key: h,
+        header: h, key: h,
         width: h === '비고' ? 35 : (h === '모델' || h === '고객사' ? 20 : 15)
       }));
 
-      // 2. 데이터 삽입
       results.forEach(row => {
         const rowData = {};
-        headers.forEach(h => {
-          rowData[h] = row[h] || '';
-        });
+        headers.forEach(h => { rowData[h] = row[h] || ''; });
         worksheet.addRow(rowData);
       });
 
-      // 3. 스타일링: 연두색 헤더 및 폰트 강조
       const headerRow = worksheet.getRow(1);
       headerRow.eachCell((cell) => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFC6E0B4' } // 엑셀 표준 연두색 (올려주신 이미지 색상)
-        };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6E0B4' } };
         cell.font = { bold: true, color: { argb: 'FF000000' } };
-        cell.border = {
-          top: { style: 'thin' }, left: { style: 'thin' },
-          bottom: { style: 'thin' }, right: { style: 'thin' }
-        };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
-      // 4. 일반 데이터 셀 테두리 및 정렬
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
           row.eachCell((cell) => {
-            cell.border = {
-              top: { style: 'thin' }, left: { style: 'thin' },
-              bottom: { style: 'thin' }, right: { style: 'thin' }
-            };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           });
         }
       });
 
-      // 5. 자동 필터(AutoFilter) 적용
-      worksheet.autoFilter = {
-        from: { row: 1, column: 1 },
-        to: { row: results.length + 1, column: headers.length }
-      };
+      worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: results.length + 1, column: headers.length } };
 
-      // 6. 파일 생성 및 다운로드 실행 (.xlsx 형식)
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, `FCST_Merged_Result_${new Date().toISOString().split('T')[0]}.xlsx`);
-
       setStatus({ type: 'success', message: '엑셀(.xlsx) 다운로드가 완료되었습니다.' });
       setTimeout(() => setStatus({ type: 'idle', message: '' }), 3000);
-
     } catch (error) {
       console.error("Excel export error:", error);
-      setStatus({ type: 'error', message: '엑셀 다운로드 실패. 터미널에서 npm install exceljs file-saver 실행 요망' });
+      setStatus({ type: 'error', message: '엑셀 다운로드 실패.' });
       setTimeout(() => setStatus({ type: 'idle', message: '' }), 5000);
     }
   };
 
   // ==========================================
-  // 마스터 데이터 관리 상태 및 로직
+  // 마스터 데이터 관리 상태
   // ==========================================
 
   const [newLine, setNewLine] = useState({ client: '', line: '', fab: '' });
@@ -421,7 +389,6 @@ export default function App() {
   const [showBulkModel, setShowBulkModel] = useState(false);
   const [bulkModelInput, setBulkModelInput] = useState('');
 
-  // 💡 ATM/VAC 날짜 형식을 3가지로 변경 (partDate, prodDate, shipDate)
   const [newAtm, setNewAtm] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 6 });
   const [searchAtm, setSearchAtm] = useState('');
   const [editAtmId, setEditAtmId] = useState(null);
@@ -429,86 +396,73 @@ export default function App() {
   const [showBulkAtm, setShowBulkAtm] = useState(false);
   const [bulkAtmInput, setBulkAtmInput] = useState('');
 
-  const [newVac, setNewVac] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
-  const [searchVac, setSearchVac] = useState('');
-  const [editVacId, setEditVacId] = useState(null);
-  const [editVacVal, setEditVacVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
-  const [showBulkVac, setShowBulkVac] = useState(false);
-  const [bulkVacInput, setBulkVacInput] = useState('');
+  // VAC General
+  const [newVacGeneral, setNewVacGeneral] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
+  const [searchVacGeneral, setSearchVacGeneral] = useState('');
+  const [editVacGeneralId, setEditVacGeneralId] = useState(null);
+  const [editVacGeneralVal, setEditVacGeneralVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
+  const [showBulkVacGeneral, setShowBulkVacGeneral] = useState(false);
+  const [bulkVacGeneralInput, setBulkVacGeneralInput] = useState('');
 
-  // 모델/라인 함수들
+  // VAC DEC
+  const [newVacDec, setNewVacDec] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
+  const [searchVacDec, setSearchVacDec] = useState('');
+  const [editVacDecId, setEditVacDecId] = useState(null);
+  const [editVacDecVal, setEditVacDecVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
+  const [showBulkVacDec, setShowBulkVacDec] = useState(false);
+  const [bulkVacDecInput, setBulkVacDecInput] = useState('');
+
+  // ==========================================
+  // 라인/모델 CRUD
+  // ==========================================
   const addLineRule = () => {
-    if(!newLine.line || !newLine.fab || !newLine.client) return;
+    if (!newLine.line || !newLine.fab || !newLine.client) return;
     const updated = { ...mappingRules };
     updated.lineMap[newLine.line] = newLine.fab;
     updated.fabClientMap[newLine.fab] = newLine.client;
-    saveRules(updated);
-    setNewLine({ client: '', line: '', fab: '' });
-    showNotification('라인이 성공적으로 등록되었습니다.');
+    saveRules(updated); setNewLine({ client: '', line: '', fab: '' }); showNotification('라인이 성공적으로 등록되었습니다.');
   };
   const saveEditedLine = (line) => {
     const updated = { ...mappingRules };
     updated.lineMap[line] = editLineVal.fab;
     updated.fabClientMap[editLineVal.fab] = editLineVal.client;
-    saveRules(updated);
-    setEditLineId(null);
-    showNotification('라인 정보가 수정되었습니다.');
+    saveRules(updated); setEditLineId(null); showNotification('라인 정보가 수정되었습니다.');
   };
-  const removeLineRule = (line) => { 
-    const updated = { ...mappingRules }; 
-    delete updated.lineMap[line]; 
-    saveRules(updated); 
-    showNotification('라인이 삭제되었습니다.');
-  };
+  const removeLineRule = (line) => { const updated = { ...mappingRules }; delete updated.lineMap[line]; saveRules(updated); showNotification('라인이 삭제되었습니다.'); };
   const handleBulkLine = () => {
     const rows = bulkLineInput.trim().split('\n');
     const updated = { ...mappingRules };
     let count = 0;
     rows.forEach(row => {
       const cols = row.split('\t').map(c => c.trim());
-      if(cols.length >= 3) {
-        const [client, line, fab] = cols;
-        if(line && fab) { updated.lineMap[line] = fab; updated.fabClientMap[fab] = client; count++; }
-      }
+      if (cols.length >= 3) { const [client, line, fab] = cols; if (line && fab) { updated.lineMap[line] = fab; updated.fabClientMap[fab] = client; count++; } }
     });
-    saveRules(updated);
-    setBulkLineInput('');
-    setShowBulkLine(false);
-    showNotification(`${count}건의 라인이 일괄 등록되었습니다.`);
+    saveRules(updated); setBulkLineInput(''); setShowBulkLine(false); showNotification(`${count}건의 라인이 일괄 등록되었습니다.`);
   };
 
   const addModelRule = () => {
-    if(!newModel.raw || !newModel.somp) return;
+    if (!newModel.raw || !newModel.somp) return;
     const updated = { ...mappingRules };
     updated.modelMap[newModel.raw] = { model: newModel.somp, pm: parseInt(newModel.pm) || 0 };
-    saveRules(updated);
-    setNewModel({ raw: '', somp: '', pm: 0 });
-    showNotification('모델이 등록되었습니다.');
+    saveRules(updated); setNewModel({ raw: '', somp: '', pm: 0 }); showNotification('모델이 등록되었습니다.');
   };
   const saveEditedModel = (raw) => {
     const updated = { ...mappingRules };
     updated.modelMap[raw] = { model: editModelVal.somp, pm: parseInt(editModelVal.pm) || 0 };
-    saveRules(updated);
-    setEditModelId(null);
-    showNotification('모델 정보가 수정되었습니다.');
+    saveRules(updated); setEditModelId(null); showNotification('모델 정보가 수정되었습니다.');
   };
-  const removeModelRule = (raw) => { 
-    const updated = { ...mappingRules }; delete updated.modelMap[raw]; saveRules(updated); showNotification('모델이 삭제되었습니다.');
-  };
+  const removeModelRule = (raw) => { const updated = { ...mappingRules }; delete updated.modelMap[raw]; saveRules(updated); showNotification('모델이 삭제되었습니다.'); };
   const handleBulkModel = () => {
     const rows = bulkModelInput.trim().split('\n');
     const updated = { ...mappingRules };
     let count = 0;
     rows.forEach(row => {
       const cols = row.split('\t').map(c => c.trim());
-      if(cols.length >= 2) {
-        if(cols[0] && cols[1]) { updated.modelMap[cols[0]] = { model: cols[1], pm: parseInt(cols[2]) || 0 }; count++; }
-      }
+      if (cols.length >= 2 && cols[0] && cols[1]) { updated.modelMap[cols[0]] = { model: cols[1], pm: parseInt(cols[2]) || 0 }; count++; }
     });
     saveRules(updated); setBulkModelInput(''); setShowBulkModel(false); showNotification(`${count}건의 모델이 일괄 등록되었습니다.`);
   };
 
-  // 💡 스마트 엑셀 날짜 파싱 헬퍼함수 (01월 06일 -> 2026-01-06)
   const parseSmartDate = (val) => {
     if (!val) return '';
     const match = val.match(/(\d+)월\s*(\d+)일/);
@@ -517,14 +471,11 @@ export default function App() {
     return val;
   };
 
-  // 💡 가로/세로 양방향 스마트 대량 등록 엔진 (ATM)
   const handleSmartBulkSchedule = (inputData, targetKey, defaultCapa = 6) => {
     const rows = inputData.trim().split('\n').map(r => r.split('\t').map(c => c.trim()));
     const updated = { ...mappingRules };
     let count = 0;
-
-    // 가로형 배열(엑셀 구조) 인지 파악
-    const isTransposed = rows.some(r => r[0] && (r[0].includes('내부관리번호') || r[0].includes('ATM') || r[0].includes('VAC')));
+    const isTransposed = rows.some(r => r[0] && (r[0].includes('내부관리번호') || r[0].includes('ATM') || r[0].includes('VAC') || r[0].includes('DEC')));
 
     if (isTransposed) {
       const idRow = rows.find(r => r[0].includes('내부관리번호'));
@@ -532,12 +483,10 @@ export default function App() {
       const prodRow = rows.find(r => r[0].includes('생산 완료일'));
       const shipRow = rows.find(r => r[0].includes('출하 가능일'));
       const capaRow = rows.find(r => r[0].includes('Capa'));
-
       if (idRow) {
         for (let i = 1; i < idRow.length; i++) {
           const id = idRow[i];
-          if (!id || (!id.startsWith('ATM') && !id.startsWith('VAC'))) continue;
-
+          if (!id) continue;
           updated[targetKey] = updated[targetKey].filter(item => item.id !== id);
           updated[targetKey].push({
             id,
@@ -550,84 +499,127 @@ export default function App() {
         }
       }
     } else {
-      // 일반 세로형 배열
       rows.forEach(cols => {
-        if(cols.length >= 4) {
+        if (cols.length >= 4) {
           const [id, part, prod, ship, capa] = cols;
-          if(id && part) {
+          if (id && part) {
             updated[targetKey] = updated[targetKey].filter(item => item.id !== id);
-            updated[targetKey].push({
-              id, partDate: parseSmartDate(part), prodDate: parseSmartDate(prod), 
-              shipDate: parseSmartDate(ship), maxCapa: parseInt(capa) || defaultCapa
-            });
+            updated[targetKey].push({ id, partDate: parseSmartDate(part), prodDate: parseSmartDate(prod), shipDate: parseSmartDate(ship), maxCapa: parseInt(capa) || defaultCapa });
             count++;
           }
         }
       });
     }
-
     updated[targetKey].sort((a, b) => new Date(a.partDate || 0) - new Date(b.partDate || 0));
     saveRules(updated);
     return count;
   };
 
-  const handleBulkAtm = () => {
-    const count = handleSmartBulkSchedule(bulkAtmInput, 'atmMaster', 6);
-    setBulkAtmInput(''); setShowBulkAtm(false); showNotification(`스마트 파싱 완료: ${count}건 ATM 등록`);
-  };
-
-  const handleBulkVac = () => {
-    const count = handleSmartBulkSchedule(bulkVacInput, 'vacMaster', 4);
-    setBulkVacInput(''); setShowBulkVac(false); showNotification(`스마트 파싱 완료: ${count}건 VAC 등록`);
-  };
-
+  // ATM CRUD
   const addAtmRule = () => {
-    if(!newAtm.id || !newAtm.partDate) return;
+    if (!newAtm.id || !newAtm.partDate) return;
     const updated = { ...mappingRules };
-    updated.atmMaster = [...updated.atmMaster, { ...newAtm, maxCapa: parseInt(newAtm.capa) || 6 }]
-      .sort((a, b) => new Date(a.partDate) - new Date(b.partDate)); 
+    updated.atmMaster = [...updated.atmMaster, { ...newAtm, maxCapa: parseInt(newAtm.capa) || 6 }].sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
     saveRules(updated); setNewAtm({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 6 }); showNotification('ATM 일정이 등록되었습니다.');
   };
   const saveEditedAtm = (id) => {
     const updated = { ...mappingRules };
-    updated.atmMaster = updated.atmMaster.map(atm => 
-      atm.id === id ? { ...atm, partDate: editAtmVal.partDate, prodDate: editAtmVal.prodDate, shipDate: editAtmVal.shipDate, maxCapa: parseInt(editAtmVal.capa) } : atm
-    ).sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+    updated.atmMaster = updated.atmMaster.map(atm => atm.id === id ? { ...atm, ...editAtmVal, maxCapa: parseInt(editAtmVal.capa) } : atm).sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
     saveRules(updated); setEditAtmId(null); showNotification('ATM 수정 완료');
   };
-  const removeAtmRule = (id) => { 
-    const updated = { ...mappingRules }; updated.atmMaster = updated.atmMaster.filter(atm => atm.id !== id); saveRules(updated); showNotification('ATM 삭제됨');
-  };
+  const removeAtmRule = (id) => { const updated = { ...mappingRules }; updated.atmMaster = updated.atmMaster.filter(a => a.id !== id); saveRules(updated); showNotification('ATM 삭제됨'); };
+  const handleBulkAtm = () => { const count = handleSmartBulkSchedule(bulkAtmInput, 'atmMaster', 6); setBulkAtmInput(''); setShowBulkAtm(false); showNotification(`스마트 파싱 완료: ${count}건 ATM 등록`); };
 
-  const addVacRule = () => {
-    if(!newVac.id || !newVac.partDate) return;
+  // VAC General CRUD
+  const addVacGeneralRule = () => {
+    if (!newVacGeneral.id || !newVacGeneral.partDate) return;
     const updated = { ...mappingRules };
-    updated.vacMaster = [...updated.vacMaster, { ...newVac, maxCapa: parseInt(newVac.capa) || 4 }]
-      .sort((a, b) => new Date(a.partDate) - new Date(b.partDate)); 
-    saveRules(updated); setNewVac({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 }); showNotification('VAC 일정이 등록되었습니다.');
+    updated.vacGeneralMaster = [...updated.vacGeneralMaster, { ...newVacGeneral, maxCapa: parseInt(newVacGeneral.capa) || 4 }].sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+    saveRules(updated); setNewVacGeneral({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 }); showNotification('VAC General 일정이 등록되었습니다.');
   };
-  const saveEditedVac = (id) => {
+  const saveEditedVacGeneral = (id) => {
     const updated = { ...mappingRules };
-    updated.vacMaster = updated.vacMaster.map(vac => 
-      vac.id === id ? { ...vac, partDate: editVacVal.partDate, prodDate: editVacVal.prodDate, shipDate: editVacVal.shipDate, maxCapa: parseInt(editVacVal.capa) } : vac
-    ).sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
-    saveRules(updated); setEditVacId(null); showNotification('VAC 수정 완료');
+    updated.vacGeneralMaster = updated.vacGeneralMaster.map(v => v.id === id ? { ...v, ...editVacGeneralVal, maxCapa: parseInt(editVacGeneralVal.capa) } : v).sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+    saveRules(updated); setEditVacGeneralId(null); showNotification('VAC General 수정 완료');
   };
-  const removeVacRule = (id) => { 
-    const updated = { ...mappingRules }; updated.vacMaster = updated.vacMaster.filter(vac => vac.id !== id); saveRules(updated); showNotification('VAC 삭제됨');
+  const removeVacGeneralRule = (id) => { const updated = { ...mappingRules }; updated.vacGeneralMaster = updated.vacGeneralMaster.filter(v => v.id !== id); saveRules(updated); showNotification('VAC General 삭제됨'); };
+  const handleBulkVacGeneral = () => { const count = handleSmartBulkSchedule(bulkVacGeneralInput, 'vacGeneralMaster', 4); setBulkVacGeneralInput(''); setShowBulkVacGeneral(false); showNotification(`스마트 파싱 완료: ${count}건 VAC General 등록`); };
+
+  // VAC DEC CRUD
+  const addVacDecRule = () => {
+    if (!newVacDec.id || !newVacDec.partDate) return;
+    const updated = { ...mappingRules };
+    updated.vacDecMaster = [...updated.vacDecMaster, { ...newVacDec, maxCapa: parseInt(newVacDec.capa) || 4 }].sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+    saveRules(updated); setNewVacDec({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 }); showNotification('VAC DEC 일정이 등록되었습니다.');
   };
+  const saveEditedVacDec = (id) => {
+    const updated = { ...mappingRules };
+    updated.vacDecMaster = updated.vacDecMaster.map(v => v.id === id ? { ...v, ...editVacDecVal, maxCapa: parseInt(editVacDecVal.capa) } : v).sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+    saveRules(updated); setEditVacDecId(null); showNotification('VAC DEC 수정 완료');
+  };
+  const removeVacDecRule = (id) => { const updated = { ...mappingRules }; updated.vacDecMaster = updated.vacDecMaster.filter(v => v.id !== id); saveRules(updated); showNotification('VAC DEC 삭제됨'); };
+  const handleBulkVacDec = () => { const count = handleSmartBulkSchedule(bulkVacDecInput, 'vacDecMaster', 4); setBulkVacDecInput(''); setShowBulkVacDec(false); showNotification(`스마트 파싱 완료: ${count}건 VAC DEC 등록`); };
 
   // 필터링
-  const filteredLines = Object.entries(mappingRules.lineMap).filter(([line, fab]) => 
-    line.toLowerCase().includes(searchLine.toLowerCase()) || 
-    fab.toLowerCase().includes(searchLine.toLowerCase()) ||
+  const filteredLines = Object.entries(mappingRules.lineMap).filter(([line, fab]) =>
+    line.toLowerCase().includes(searchLine.toLowerCase()) || fab.toLowerCase().includes(searchLine.toLowerCase()) ||
     (mappingRules.fabClientMap[fab] || '').toLowerCase().includes(searchLine.toLowerCase())
   );
-  const filteredModels = Object.entries(mappingRules.modelMap).filter(([raw, info]) => 
+  const filteredModels = Object.entries(mappingRules.modelMap).filter(([raw, info]) =>
     raw.toLowerCase().includes(searchModel.toLowerCase()) || info.model.toLowerCase().includes(searchModel.toLowerCase())
   );
   const filteredAtms = mappingRules.atmMaster.filter(atm => atm.id.toLowerCase().includes(searchAtm.toLowerCase()));
-  const filteredVacs = (mappingRules.vacMaster || []).filter(vac => vac.id.toLowerCase().includes(searchVac.toLowerCase()));
+  const filteredVacGenerals = (mappingRules.vacGeneralMaster || []).filter(v => v.id.toLowerCase().includes(searchVacGeneral.toLowerCase()));
+  const filteredVacDecs = (mappingRules.vacDecMaster || []).filter(v => v.id.toLowerCase().includes(searchVacDec.toLowerCase()));
+
+  // 공통 스케줄 테이블 렌더러
+  const renderScheduleTable = ({ items, editId, editVal, setEditVal, onEdit, onSave, onCancel, onRemove, thColor = 'text-gray-600' }) => (
+    <div className="border rounded-lg overflow-x-auto">
+      <table className="w-full text-sm text-left">
+        <thead className="bg-gray-100 border-b">
+          <tr>
+            <th className={`px-4 py-3 ${thColor}`}>ID</th>
+            <th className={`px-4 py-3 ${thColor}`}>Part 납품일</th>
+            <th className={`px-4 py-3 ${thColor}`}>생산 완료일</th>
+            <th className={`px-4 py-3 ${thColor}`}>출하 가능일</th>
+            <th className={`px-4 py-3 ${thColor}`}>최대 Capa</th>
+            <th className={`px-4 py-3 text-center ${thColor}`}>관리</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {items.map((item, idx) => (
+            <tr key={idx} className="hover:bg-gray-50 group transition-colors">
+              <td className="px-4 py-3 font-bold text-gray-800">{item.id}</td>
+              {editId === item.id ? (
+                <>
+                  <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVal.partDate} onChange={e => setEditVal({...editVal, partDate: e.target.value})} /></td>
+                  <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVal.prodDate} onChange={e => setEditVal({...editVal, prodDate: e.target.value})} /></td>
+                  <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVal.shipDate} onChange={e => setEditVal({...editVal, shipDate: e.target.value})} /></td>
+                  <td className="px-2 py-2"><input type="number" className="border p-1 text-xs rounded w-16" value={editVal.capa} onChange={e => setEditVal({...editVal, capa: e.target.value})} /></td>
+                  <td className="px-4 py-2 flex justify-center gap-2">
+                    <button onClick={() => onSave(item.id)} className="text-green-600 hover:text-green-800"><CheckCircle2 size={18}/></button>
+                    <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className="px-4 py-3 text-gray-600">{item.partDate}</td>
+                  <td className="px-4 py-3 text-gray-600">{item.prodDate}</td>
+                  <td className="px-4 py-3 text-gray-600">{item.shipDate}</td>
+                  <td className="px-4 py-3 font-bold text-gray-700">{item.maxCapa}</td>
+                  <td className="px-4 py-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => onEdit(item)} className="text-gray-400 hover:text-blue-600"><Edit size={16}/></button>
+                    <button onClick={() => onRemove(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 size={16}/></button>
+                  </td>
+                </>
+              )}
+            </tr>
+          ))}
+          {items.length === 0 && <tr><td colSpan="6" className="text-center py-6 text-gray-400">검색 결과가 없습니다.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
@@ -667,7 +659,6 @@ export default function App() {
 
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'fcst' ? (
-            // ... FCST 탭 UI (기존 동일)
             <div className="max-w-7xl mx-auto space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl shadow-sm border p-4 flex flex-col">
@@ -683,26 +674,23 @@ export default function App() {
                   <textarea className="w-full h-48 border border-gray-200 rounded-lg bg-gray-50 p-4 text-xs resize-none focus:ring-2 focus:ring-green-500 outline-none" placeholder="기존에 관리하던 SOMP 엑셀 데이터를 헤더 포함해서 붙여넣으세요..." onChange={(e) => setSompInput(e.target.value)} value={sompInput} />
                 </div>
               </div>
-
               <div className="flex justify-center py-2">
                 <button onClick={processData} disabled={status.type === 'loading'} className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-lg font-bold text-white flex items-center gap-2 shadow-md">
                   {status.type === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />} 데이터 스캔 및 하단에 추가하기
                 </button>
               </div>
-
               {status.message && status.type !== 'loading' && (
                 <div className={`p-4 rounded-lg font-bold text-center border ${status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>{status.message}</div>
               )}
-
               {results.length > 0 && (
                 <div className="bg-white rounded-xl shadow border overflow-hidden">
                   <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
                     <h3 className="font-bold flex items-center gap-2 text-gray-800">
-                      <FileSpreadsheet className="w-5 h-5 text-gray-500" /> 병합 결과 확인 
+                      <FileSpreadsheet className="w-5 h-5 text-gray-500" /> 병합 결과 확인
                       <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded ml-2">파란색 배경이 새로 추가된 데이터입니다</span>
                     </h3>
                     <button onClick={downloadExcel} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
-                      <Download className="w-4 h-4" /> CSV 다운로드
+                      <Download className="w-4 h-4" /> 엑셀 다운로드
                     </button>
                   </div>
                   <div className="overflow-x-auto">
@@ -712,24 +700,21 @@ export default function App() {
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {results.map((row, i) => {
-                          // UI/UX 개선: 비고란의 상태에 따라 행(Row)의 배경색을 다르게 강조
                           let rowClass = 'bg-white';
                           if (row._isNew) {
-                            rowClass = 'bg-blue-50/70'; // 정상 배정 (연한 파란색)
-                            if (row['비고'] && row['비고'].includes('CAPA초과')) rowClass = 'bg-orange-50'; // Capa 초과 (주황색)
-                            if (row['비고'] && row['비고'].includes('없음')) rowClass = 'bg-red-50'; // 배정 실패 (빨간색)
+                            rowClass = 'bg-blue-50/70';
+                            if (row['비고'] && row['비고'].includes('CAPA초과')) rowClass = 'bg-orange-50';
+                            if (row['비고'] && row['비고'].includes('없음')) rowClass = 'bg-red-50';
                           }
-                          
                           return (
                             <tr key={i} className={`hover:bg-gray-50 transition-colors ${rowClass}`}>
                               {getHeaders().map((key, j) => {
                                 let tdClass = "px-4 py-2 whitespace-nowrap text-gray-700";
-                                // 비고란의 텍스트 색상 포인트 추가
                                 if (key === '비고') {
-                                  if (row[key].includes('CAPA초과')) tdClass += " text-orange-600 font-bold";
-                                  if (row[key].includes('ATM없음')) tdClass += " text-red-600 font-bold";
+                                  if (row[key] && row[key].includes('CAPA초과')) tdClass += " text-orange-600 font-bold";
+                                  if (row[key] && row[key].includes('ATM없음')) tdClass += " text-red-600 font-bold";
                                 }
-                                return <td key={j} className={tdClass}>{row[key] || '-'}</td>
+                                return <td key={j} className={tdClass}>{row[key] || '-'}</td>;
                               })}
                             </tr>
                           );
@@ -742,48 +727,35 @@ export default function App() {
             </div>
           ) : (
             <div className="max-w-7xl mx-auto space-y-8">
-               
-               {/* ================= 모델 매핑 설정 ================= */}
-               <div className="bg-white rounded-xl shadow border p-6">
+
+              {/* 모델 매핑 */}
+              <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Cpu className="text-blue-600" /> 모델 매핑</h4>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                      <input placeholder="모델 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 outline-none w-64" value={searchModel} onChange={e => setSearchModel(e.target.value)} />
-                    </div>
-                    <button onClick={() => setShowBulkModel(!showBulkModel)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition">
-                      <Upload size={16}/> 대량 등록
-                    </button>
+                    <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="모델 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 outline-none w-64" value={searchModel} onChange={e => setSearchModel(e.target.value)} /></div>
+                    <button onClick={() => setShowBulkModel(!showBulkModel)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 대량 등록</button>
                   </div>
                 </div>
-
                 {showBulkModel && (
-                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-blue-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 대량 복사/붙여넣기</span>
-                      <button onClick={() => setShowBulkModel(false)} className="text-blue-500 hover:text-blue-800"><X size={16}/></button>
-                    </div>
-                    <textarea className="w-full h-32 border-0 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" placeholder="SUPRA-N-M&#9;SUPRA Nm (J)&#9;0&#10;SUPRA-N&#9;SUPRA N&#9;0" value={bulkModelInput} onChange={e => setBulkModelInput(e.target.value)} />
-                    <div className="flex justify-end">
-                      <button onClick={handleBulkModel} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700"><CheckCircle2 size={16}/> 일괄 등록 실행</button>
-                    </div>
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-blue-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 대량 복사/붙여넣기</span><button onClick={() => setShowBulkModel(false)} className="text-blue-500"><X size={16}/></button></div>
+                    <textarea className="w-full h-32 border-0 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" placeholder="SUPRA-N-M&#9;SUPRA Nm (J)&#9;0" value={bulkModelInput} onChange={e => setBulkModelInput(e.target.value)} />
+                    <div className="flex justify-end"><button onClick={handleBulkModel} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700"><CheckCircle2 size={16}/> 일괄 등록 실행</button></div>
                   </div>
                 )}
-
                 <div className="flex gap-2 mb-6 bg-gray-50 p-3 rounded-lg border">
                   <input placeholder="Raw 모델 입력" className="border p-2 flex-1 rounded text-sm bg-white" value={newModel.raw} onChange={e => setNewModel({...newModel, raw: e.target.value})}/>
                   <input placeholder="변환 모델(SOMP) 입력" className="border p-2 flex-1 rounded text-sm bg-white" value={newModel.somp} onChange={e => setNewModel({...newModel, somp: e.target.value})}/>
                   <input placeholder="PM 수" type="number" className="border p-2 w-24 rounded text-sm bg-white" value={newModel.pm} onChange={e => setNewModel({...newModel, pm: e.target.value})}/>
                   <button onClick={addModelRule} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1"><Plus size={16}/> 추가</button>
                 </div>
-                
                 <div className="grid grid-cols-3 gap-3">
                   {filteredModels.map(([raw, info], idx) => (
                     <div key={idx} className="flex justify-between items-center p-3 border rounded-lg bg-white shadow-sm hover:border-blue-300 transition-colors group">
                       {editModelId === raw ? (
                         <div className="flex items-center gap-2 w-full">
-                          <span className="font-bold text-gray-500 w-1/3 truncate text-sm" title={raw}>{raw}</span>
+                          <span className="font-bold text-gray-500 w-1/3 truncate text-sm">{raw}</span>
                           <input className="border p-1 w-1/3 text-xs rounded" value={editModelVal.somp} onChange={e => setEditModelVal({...editModelVal, somp: e.target.value})} placeholder="변환모델" />
                           <input className="border p-1 w-1/6 text-xs rounded" type="number" value={editModelVal.pm} onChange={e => setEditModelVal({...editModelVal, pm: e.target.value})} placeholder="PM" />
                           <div className="flex gap-1">
@@ -809,41 +781,28 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ================= 라인 매핑 설정 ================= */}
+              {/* 라인 매핑 */}
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Building2 className="text-indigo-600" /> 라인 매핑</h4>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                      <input placeholder="라인/FAB 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 outline-none w-64" value={searchLine} onChange={e => setSearchLine(e.target.value)} />
-                    </div>
-                    <button onClick={() => setShowBulkLine(!showBulkLine)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition">
-                      <Upload size={16}/> 대량 등록
-                    </button>
+                    <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="라인/FAB 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 outline-none w-64" value={searchLine} onChange={e => setSearchLine(e.target.value)} /></div>
+                    <button onClick={() => setShowBulkLine(!showBulkLine)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 대량 등록</button>
                   </div>
                 </div>
-
                 {showBulkLine && (
-                  <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-indigo-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 대량 복사/붙여넣기</span>
-                      <button onClick={() => setShowBulkLine(false)} className="text-indigo-500 hover:text-indigo-800"><X size={16}/></button>
-                    </div>
+                  <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-indigo-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 대량 복사/붙여넣기</span><button onClick={() => setShowBulkLine(false)} className="text-indigo-500"><X size={16}/></button></div>
                     <textarea className="w-full h-32 border-0 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" value={bulkLineInput} onChange={e => setBulkLineInput(e.target.value)} />
-                    <div className="flex justify-end">
-                      <button onClick={handleBulkLine} className="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700"><CheckCircle2 size={16}/> 일괄 등록 실행</button>
-                    </div>
+                    <div className="flex justify-end"><button onClick={handleBulkLine} className="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700"><CheckCircle2 size={16}/> 일괄 등록 실행</button></div>
                   </div>
                 )}
-
                 <div className="flex gap-2 mb-6 bg-gray-50 p-3 rounded-lg border">
                   <input placeholder="고객사" className="border p-2 flex-1 rounded text-sm bg-white" value={newLine.client} onChange={e => setNewLine({...newLine, client: e.target.value})}/>
                   <input placeholder="입력 라인" className="border p-2 flex-1 rounded text-sm bg-white" value={newLine.line} onChange={e => setNewLine({...newLine, line: e.target.value})}/>
                   <input placeholder="변환 FAB" className="border p-2 flex-1 rounded text-sm bg-white" value={newLine.fab} onChange={e => setNewLine({...newLine, fab: e.target.value})}/>
                   <button onClick={addLineRule} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1"><Plus size={16}/> 추가</button>
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   {filteredLines.map(([line, fab], idx) => (
                     <div key={idx} className="flex justify-between items-center p-3 border rounded-lg bg-white shadow-sm hover:border-indigo-300 transition-colors group">
@@ -879,42 +838,22 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ================= ATM 스케줄 설정 ================= */}
+              {/* ATM 스케줄 */}
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><CalendarClock className="text-green-600" /> ATM 스케줄</h4>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                      <input placeholder="ATM ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchAtm} onChange={e => setSearchAtm(e.target.value)} />
-                    </div>
-                    <button onClick={() => setShowBulkAtm(!showBulkAtm)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition">
-                      <Upload size={16}/> 스마트 대량 등록
-                    </button>
+                    <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="ATM ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchAtm} onChange={e => setSearchAtm(e.target.value)} /></div>
+                    <button onClick={() => setShowBulkAtm(!showBulkAtm)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 스마트 대량 등록</button>
                   </div>
                 </div>
-
-                {/* ATM 대량 등록 패널 */}
                 {showBulkAtm && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-green-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 표 그대로 복사/붙여넣기</span>
-                      <button onClick={() => setShowBulkAtm(false)} className="text-green-500 hover:text-green-800"><X size={16}/></button>
-                    </div>
-                    <p className="text-xs text-green-700 mb-3">
-                      엑셀에서 관리하시는 <b>가로형 표(행: Part납품일/생산완료일..., 열: ATM-101...)</b> 또는 일반 세로형 표를 <b>그대로 드래그해서</b> 붙여넣으세요. 스마트 파서가 '01월 06일' 형태의 날짜도 알아서 변환합니다.
-                    </p>
-                    <textarea 
-                      className="w-full h-32 border border-green-300 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" 
-                      placeholder="여기에 엑셀 표를 붙여넣으세요..."
-                      value={bulkAtmInput} onChange={e => setBulkAtmInput(e.target.value)}
-                    />
-                    <div className="flex justify-end">
-                      <button onClick={handleBulkAtm} className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-green-700"><CheckCircle2 size={16}/> 스마트 등록 실행</button>
-                    </div>
+                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-green-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 표 그대로 복사/붙여넣기</span><button onClick={() => setShowBulkAtm(false)} className="text-green-500"><X size={16}/></button></div>
+                    <textarea className="w-full h-32 border border-green-300 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" placeholder="여기에 엑셀 표를 붙여넣으세요..." value={bulkAtmInput} onChange={e => setBulkAtmInput(e.target.value)} />
+                    <div className="flex justify-end"><button onClick={handleBulkAtm} className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-green-700"><CheckCircle2 size={16}/> 스마트 등록 실행</button></div>
                   </div>
                 )}
-
                 <div className="flex gap-2 mb-6 bg-gray-50 p-3 rounded-lg border items-center">
                   <input placeholder="ATM ID" className="border p-2 flex-1 rounded text-sm bg-white" value={newAtm.id} onChange={e => setNewAtm({...newAtm, id: e.target.value})}/>
                   <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Part 납품일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newAtm.partDate} onChange={e => setNewAtm({...newAtm, partDate: e.target.value})}/></div>
@@ -923,130 +862,79 @@ export default function App() {
                   <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Capa</span><input type="number" className="border p-2 w-20 rounded text-sm bg-white" value={newAtm.capa} onChange={e => setNewAtm({...newAtm, capa: e.target.value})}/></div>
                   <div className="flex flex-col justify-end h-full mt-4"><button onClick={addAtmRule} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1 h-[38px]"><Plus size={16}/> 추가</button></div>
                 </div>
-
-                <div className="border rounded-lg overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 border-b">
-                      <tr><th className="px-4 py-3 text-gray-600">ID</th><th className="px-4 py-3 text-gray-600">Part 납품일</th><th className="px-4 py-3 text-gray-600">생산 완료일</th><th className="px-4 py-3 text-gray-600">출하 가능일</th><th className="px-4 py-3 text-gray-600">최대 Capa</th><th className="px-4 py-3 text-center text-gray-600">관리</th></tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {filteredAtms.map((atm, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 group transition-colors">
-                          <td className="px-4 py-3 font-bold text-gray-800">{atm.id}</td>
-                          {editAtmId === atm.id ? (
-                            <>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editAtmVal.partDate} onChange={e => setEditAtmVal({...editAtmVal, partDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editAtmVal.prodDate} onChange={e => setEditAtmVal({...editAtmVal, prodDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editAtmVal.shipDate} onChange={e => setEditAtmVal({...editAtmVal, shipDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="number" className="border p-1 text-xs rounded w-16" value={editAtmVal.capa} onChange={e => setEditAtmVal({...editAtmVal, capa: e.target.value})} /></td>
-                              <td className="px-4 py-2 flex justify-center gap-2">
-                                <button onClick={() => saveEditedAtm(atm.id)} className="text-green-600 hover:text-green-800"><CheckCircle2 size={18}/></button>
-                                <button onClick={() => setEditAtmId(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="px-4 py-3 text-gray-600">{atm.partDate}</td>
-                              <td className="px-4 py-3 text-gray-600">{atm.prodDate}</td>
-                              <td className="px-4 py-3 text-gray-600">{atm.shipDate}</td>
-                              <td className="px-4 py-3 text-green-700 font-bold">{atm.maxCapa}</td>
-                              <td className="px-4 py-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => { setEditAtmId(atm.id); setEditAtmVal({ partDate: atm.partDate, prodDate: atm.prodDate, shipDate: atm.shipDate, capa: atm.maxCapa }); }} className="text-gray-400 hover:text-blue-600"><Edit size={16}/></button>
-                                <button onClick={() => removeAtmRule(atm.id)} className="text-gray-400 hover:text-red-600"><Trash2 size={16}/></button>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
-                      {filteredAtms.length === 0 && <tr><td colSpan="6" className="text-center py-6 text-gray-400">검색 결과가 없습니다.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
+                {renderScheduleTable({
+                  items: filteredAtms, editId: editAtmId, editVal: editAtmVal, setEditVal: setEditAtmVal,
+                  onEdit: (item) => { setEditAtmId(item.id); setEditAtmVal({ partDate: item.partDate, prodDate: item.prodDate, shipDate: item.shipDate, capa: item.maxCapa }); },
+                  onSave: saveEditedAtm, onCancel: () => setEditAtmId(null), onRemove: removeAtmRule
+                })}
               </div>
 
-              {/* ================= VAC 스케줄 설정 ================= */}
+              {/* VAC General 스케줄 */}
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-teal-600" /> VAC 스케줄</h4>
+                  <div>
+                    <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-teal-600" /> VAC General 스케줄</h4>
+                    <p className="text-xs text-gray-400 mt-0.5 ml-7">SUPRA XP, INTEGER plus</p>
+                  </div>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                      <input placeholder="VAC ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchVac} onChange={e => setSearchVac(e.target.value)} />
-                    </div>
-                    <button onClick={() => setShowBulkVac(!showBulkVac)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition">
-                      <Upload size={16}/> 스마트 대량 등록
-                    </button>
+                    <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="VAC ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchVacGeneral} onChange={e => setSearchVacGeneral(e.target.value)} /></div>
+                    <button onClick={() => setShowBulkVacGeneral(!showBulkVacGeneral)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 스마트 대량 등록</button>
                   </div>
                 </div>
-
-                {/* VAC 대량 등록 패널 */}
-                {showBulkVac && (
-                  <div className="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-teal-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 표 그대로 복사/붙여넣기</span>
-                      <button onClick={() => setShowBulkVac(false)} className="text-teal-500 hover:text-teal-800"><X size={16}/></button>
-                    </div>
-                    <p className="text-xs text-teal-700 mb-3">
-                      가로형(Transposed) 엑셀 표를 통째로 복사해서 붙여넣으세요! 날짜 텍스트까지 시스템이 완벽하게 식별합니다.
-                    </p>
-                    <textarea 
-                      className="w-full h-32 border border-teal-300 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" 
-                      placeholder="여기에 엑셀 표를 붙여넣으세요..."
-                      value={bulkVacInput} onChange={e => setBulkVacInput(e.target.value)}
-                    />
-                    <div className="flex justify-end">
-                      <button onClick={handleBulkVac} className="bg-teal-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-teal-700"><CheckCircle2 size={16}/> 스마트 등록 실행</button>
-                    </div>
+                {showBulkVacGeneral && (
+                  <div className="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-teal-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 표 그대로 복사/붙여넣기</span><button onClick={() => setShowBulkVacGeneral(false)} className="text-teal-500"><X size={16}/></button></div>
+                    <textarea className="w-full h-32 border border-teal-300 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" placeholder="여기에 엑셀 표를 붙여넣으세요..." value={bulkVacGeneralInput} onChange={e => setBulkVacGeneralInput(e.target.value)} />
+                    <div className="flex justify-end"><button onClick={handleBulkVacGeneral} className="bg-teal-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-teal-700"><CheckCircle2 size={16}/> 스마트 등록 실행</button></div>
                   </div>
                 )}
-
                 <div className="flex gap-2 mb-6 bg-gray-50 p-3 rounded-lg border items-center">
-                  <input placeholder="VAC ID" className="border p-2 flex-1 rounded text-sm bg-white" value={newVac.id} onChange={e => setNewVac({...newVac, id: e.target.value})}/>
-                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Part 납품일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVac.partDate} onChange={e => setNewVac({...newVac, partDate: e.target.value})}/></div>
-                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">생산 완료일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVac.prodDate} onChange={e => setNewVac({...newVac, prodDate: e.target.value})}/></div>
-                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">출하 가능일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVac.shipDate} onChange={e => setNewVac({...newVac, shipDate: e.target.value})}/></div>
-                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Capa</span><input type="number" className="border p-2 w-20 rounded text-sm bg-white" value={newVac.capa} onChange={e => setNewVac({...newVac, capa: e.target.value})}/></div>
-                  <div className="flex flex-col justify-end h-full mt-4"><button onClick={addVacRule} className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1 h-[38px]"><Plus size={16}/> 추가</button></div>
+                  <input placeholder="VAC ID" className="border p-2 flex-1 rounded text-sm bg-white" value={newVacGeneral.id} onChange={e => setNewVacGeneral({...newVacGeneral, id: e.target.value})}/>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Part 납품일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacGeneral.partDate} onChange={e => setNewVacGeneral({...newVacGeneral, partDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">생산 완료일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacGeneral.prodDate} onChange={e => setNewVacGeneral({...newVacGeneral, prodDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">출하 가능일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacGeneral.shipDate} onChange={e => setNewVacGeneral({...newVacGeneral, shipDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Capa</span><input type="number" className="border p-2 w-20 rounded text-sm bg-white" value={newVacGeneral.capa} onChange={e => setNewVacGeneral({...newVacGeneral, capa: e.target.value})}/></div>
+                  <div className="flex flex-col justify-end h-full mt-4"><button onClick={addVacGeneralRule} className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1 h-[38px]"><Plus size={16}/> 추가</button></div>
                 </div>
+                {renderScheduleTable({
+                  items: filteredVacGenerals, editId: editVacGeneralId, editVal: editVacGeneralVal, setEditVal: setEditVacGeneralVal,
+                  onEdit: (item) => { setEditVacGeneralId(item.id); setEditVacGeneralVal({ partDate: item.partDate, prodDate: item.prodDate, shipDate: item.shipDate, capa: item.maxCapa }); },
+                  onSave: saveEditedVacGeneral, onCancel: () => setEditVacGeneralId(null), onRemove: removeVacGeneralRule
+                })}
+              </div>
 
-                <div className="border rounded-lg overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 border-b">
-                      <tr><th className="px-4 py-3 text-gray-600">ID</th><th className="px-4 py-3 text-gray-600">Part 납품일</th><th className="px-4 py-3 text-gray-600">생산 완료일</th><th className="px-4 py-3 text-gray-600">출하 가능일</th><th className="px-4 py-3 text-gray-600">최대 Capa</th><th className="px-4 py-3 text-center text-gray-600">관리</th></tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {filteredVacs.map((vac, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 group transition-colors">
-                          <td className="px-4 py-3 font-bold text-gray-800">{vac.id}</td>
-                          {editVacId === vac.id ? (
-                            <>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVacVal.partDate} onChange={e => setEditVacVal({...editVacVal, partDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVacVal.prodDate} onChange={e => setEditVacVal({...editVacVal, prodDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVacVal.shipDate} onChange={e => setEditVacVal({...editVacVal, shipDate: e.target.value})} /></td>
-                              <td className="px-2 py-2"><input type="number" className="border p-1 text-xs rounded w-16" value={editVacVal.capa} onChange={e => setEditVacVal({...editVacVal, capa: e.target.value})} /></td>
-                              <td className="px-4 py-2 flex justify-center gap-2">
-                                <button onClick={() => saveEditedVac(vac.id)} className="text-teal-600 hover:text-teal-800"><CheckCircle2 size={18}/></button>
-                                <button onClick={() => setEditVacId(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="px-4 py-3 text-gray-600">{vac.partDate}</td>
-                              <td className="px-4 py-3 text-gray-600">{vac.prodDate}</td>
-                              <td className="px-4 py-3 text-gray-600">{vac.shipDate}</td>
-                              <td className="px-4 py-3 text-teal-700 font-bold">{vac.maxCapa}</td>
-                              <td className="px-4 py-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => { setEditVacId(vac.id); setEditVacVal({ partDate: vac.partDate, prodDate: vac.prodDate, shipDate: vac.shipDate, capa: vac.maxCapa }); }} className="text-gray-400 hover:text-teal-600"><Edit size={16}/></button>
-                                <button onClick={() => removeVacRule(vac.id)} className="text-gray-400 hover:text-red-600"><Trash2 size={16}/></button>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
-                      {filteredVacs.length === 0 && <tr><td colSpan="6" className="text-center py-6 text-gray-400">검색 결과가 없습니다.</td></tr>}
-                    </tbody>
-                  </table>
+              {/* VAC DEC 스케줄 */}
+              <div className="bg-white rounded-xl shadow border p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-purple-600" /> VAC DEC 스케줄</h4>
+                    <p className="text-xs text-gray-400 mt-0.5 ml-7">PRECIA, OMNIS plus, ZIVIS XP</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="DEC ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchVacDec} onChange={e => setSearchVacDec(e.target.value)} /></div>
+                    <button onClick={() => setShowBulkVacDec(!showBulkVacDec)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 스마트 대량 등록</button>
+                  </div>
                 </div>
+                {showBulkVacDec && (
+                  <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-purple-900 flex items-center gap-2"><ClipboardPaste size={16}/> 엑셀 표 그대로 복사/붙여넣기</span><button onClick={() => setShowBulkVacDec(false)} className="text-purple-500"><X size={16}/></button></div>
+                    <textarea className="w-full h-32 border border-purple-300 bg-white p-3 text-sm rounded shadow-inner mb-3 outline-none" placeholder="여기에 엑셀 표를 붙여넣으세요..." value={bulkVacDecInput} onChange={e => setBulkVacDecInput(e.target.value)} />
+                    <div className="flex justify-end"><button onClick={handleBulkVacDec} className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-purple-700"><CheckCircle2 size={16}/> 스마트 등록 실행</button></div>
+                  </div>
+                )}
+                <div className="flex gap-2 mb-6 bg-gray-50 p-3 rounded-lg border items-center">
+                  <input placeholder="DEC ID" className="border p-2 flex-1 rounded text-sm bg-white" value={newVacDec.id} onChange={e => setNewVacDec({...newVacDec, id: e.target.value})}/>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Part 납품일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacDec.partDate} onChange={e => setNewVacDec({...newVacDec, partDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">생산 완료일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacDec.prodDate} onChange={e => setNewVacDec({...newVacDec, prodDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">출하 가능일</span><input type="date" className="border p-2 w-32 rounded text-sm bg-white" value={newVacDec.shipDate} onChange={e => setNewVacDec({...newVacDec, shipDate: e.target.value})}/></div>
+                  <div className="flex flex-col"><span className="text-[10px] text-gray-500 font-bold ml-1">Capa</span><input type="number" className="border p-2 w-20 rounded text-sm bg-white" value={newVacDec.capa} onChange={e => setNewVacDec({...newVacDec, capa: e.target.value})}/></div>
+                  <div className="flex flex-col justify-end h-full mt-4"><button onClick={addVacDecRule} className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded text-sm font-bold flex items-center gap-1 h-[38px]"><Plus size={16}/> 추가</button></div>
+                </div>
+                {renderScheduleTable({
+                  items: filteredVacDecs, editId: editVacDecId, editVal: editVacDecVal, setEditVal: setEditVacDecVal,
+                  onEdit: (item) => { setEditVacDecId(item.id); setEditVacDecVal({ partDate: item.partDate, prodDate: item.prodDate, shipDate: item.shipDate, capa: item.maxCapa }); },
+                  onSave: saveEditedVacDec, onCancel: () => setEditVacDecId(null), onRemove: removeVacDecRule
+                })}
               </div>
 
             </div>
