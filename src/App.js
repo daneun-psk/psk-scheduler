@@ -182,7 +182,8 @@ export default function App() {
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            const partDate = row['납품일'] || '';
+            // '고객 납기' 우선, 없으면 '납품일' fallback (기존 데이터 호환)
+            const partDate = row['고객 납기'] || row['납품일'] || '';
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
@@ -272,11 +273,11 @@ export default function App() {
               unchangedCount += qty;
               existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
             } else {
-              // 납기변경
+              // 납기변경 — 고객 납기만 업데이트 (납품일=LOT partDate는 건드리지 않음)
               changedItems.push({ sn: inputSN, oldDate: existingDate, newDate: reqDate, clientName, fabName, model: modelInfo.model });
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
-                existingData[e.idx]['납품일'] = reqDate;
+                existingData[e.idx]['고객 납기'] = reqDate;
                 const prevBigo = existingData[e.idx]['비고'] || '';
                 existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${existingDate}→${reqDate}]`;
               });
@@ -287,7 +288,7 @@ export default function App() {
           // ── 신규 처리 ──────────────────────────────────
           const reqDateObj = reqDate ? new Date(reqDate) : null;
           for (let i = 0; i < qty; i++) {
-            let assignedAtm = '', prodEndDate = '', shipAvailableDate = '';
+            let assignedAtm = '', lotPartDate = '', prodEndDate = '', shipAvailableDate = '';
             let remarksArr = [];
 
             if (!rawLine) remarksArr.push('라인 미등록');
@@ -308,6 +309,7 @@ export default function App() {
               }
               if (matchedAtm) {
                 assignedAtm = matchedAtm.id;
+                lotPartDate = matchedAtm.partDate;
                 prodEndDate = matchedAtm.prodDate;
                 shipAvailableDate = matchedAtm.shipDate;
                 const currentLoad = atmLoad[matchedAtm.id] + 1;
@@ -324,7 +326,9 @@ export default function App() {
             newItems.push({
               '그룹': 'Sales',
               '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
-              '배정 LOT': assignedAtm, '비고': remarksArr.join(', '), '납품일': reqDate,
+              '배정 LOT': assignedAtm, '비고': remarksArr.join(', '),
+              '고객 납기': reqDate,
+              '납품일': lotPartDate,
               '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true, '_status': '신규'
             });
           }
@@ -484,7 +488,8 @@ export default function App() {
     const groupResults = Object.entries(groups).map(([key, { clientName, modelName, items }]) => {
       const itemResults = items.map(item => {
         const currentLotId = item['배정 LOT'] || item['배정LOT'];
-        const reqDate = item['납품일'];
+        // 고객 납기 기준으로 LOT 적합성 판단 (납품일=LOT partDate이므로 혼용 방지)
+        const reqDate = item['고객 납기'] || item['납품일'];
         const reqDateObj = new Date(reqDate);
         const sn = extractSN(item['비고']);
 
