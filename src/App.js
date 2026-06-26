@@ -964,7 +964,7 @@ export default function App() {
                   {status.type === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />} 데이터 스캔 및 분석
                 </button>
                 {results.length > 0 && (
-                  <button onClick={runOptimization} className="px-8 py-3 bg-indigo-700 hover:bg-indigo-800 rounded-lg font-bold text-white flex items-center gap-2 shadow-md">
+                  <button onClick={() => runOptimization()} className="px-8 py-3 bg-indigo-700 hover:bg-indigo-800 rounded-lg font-bold text-white flex items-center gap-2 shadow-md">
                     <AlertCircle className="w-5 h-5" /> LOT 최적화 분석
                   </button>
                 )}
