@@ -327,8 +327,10 @@ export default function App() {
     try {
       // 동적 임포트: 라이브러리가 없을 때 앱 전체가 강제 종료되는 것을 방지합니다.
       // 사용 전 반드시 터미널에서 npm install exceljs file-saver 를 실행해야 합니다.
-      const ExcelJS = await import('exceljs');
-      const { saveAs } = await import('file-saver');
+      const ExcelJS = window.ExcelJS;
+      const saveAs = window.saveAs;
+
+      if (!ExcelJS || !saveAs) throw new Error('CDN 라이브러리 로드 실패');
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('FCST 배정결과');
