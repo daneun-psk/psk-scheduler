@@ -461,12 +461,13 @@ export default function App() {
 
         const isDateChanged = changedSNSet.has(sn);
 
+        const currentShipDate = currentLot?.shipDate || '';
+
         // 현재 LOT 자체가 납기 초과인지 확인
         if (currentShipObj && currentShipObj > reqDateObj) {
           return {
-            type: 'invalid', sn, currentLotId, reqDate, isDateChanged,
-            currentShipDate: currentLot.shipDate,
-            msg: `출하일(${currentLot.shipDate}) > 납기(${reqDate})`
+            type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
+            msg: `출하일(${currentShipDate}) > 납기(${reqDate})`
           };
         }
 
@@ -479,7 +480,7 @@ export default function App() {
         });
 
         if (eligible.length === 0) {
-          return { type: 'invalid', sn, currentLotId, reqDate, isDateChanged, msg: '가용 LOT 없음' };
+          return { type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged, msg: '가용 LOT 없음' };
         }
 
         // 최적 LOT = shipDate가 납기에 가장 가까운 것
@@ -493,15 +494,15 @@ export default function App() {
 
         if (optimalLot.id !== currentLotId) {
           return {
-            type: 'improve', sn, currentLotId,
-            suggestedLotId: optimalLot.id,
+            type: 'improve', sn, currentLotId, currentShipDate,
+            suggestedLotId: optimalLot.id, suggestedShipDate: optimalLot.shipDate,
             currentGap, optimalGap,
             gapReduction: (currentGap ?? 0) - optimalGap,
             reqDate, isDateChanged,
           };
         }
 
-        return { type: 'optimal', sn, currentLotId, currentGap, reqDate, isDateChanged };
+        return { type: 'optimal', sn, currentLotId, currentShipDate, currentGap, reqDate, isDateChanged };
       });
 
       return {
@@ -1080,6 +1081,9 @@ export default function App() {
                                   {/* 현재 LOT */}
                                   <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
                                     {r.currentLotId}
+                                    {r.currentShipDate && (
+                                      <span className="ml-1 text-gray-400 font-normal text-[10px]">({r.currentShipDate})</span>
+                                    )}
                                   </span>
                                   {/* 화살표 */}
                                   <span className="col-span-1 text-center text-gray-400">
@@ -1087,8 +1091,15 @@ export default function App() {
                                   </span>
                                   {/* 제안 LOT / 메시지 */}
                                   <span className="col-span-2 font-bold text-indigo-700">
-                                    {r.type === 'improve' ? r.suggestedLotId : ''}
-                                    {r.type === 'invalid' ? <span className="text-red-600 font-normal">{r.msg}</span> : ''}
+                                    {r.type === 'improve' && (
+                                      <>
+                                        {r.suggestedLotId}
+                                        {r.suggestedShipDate && (
+                                          <span className="ml-1 text-indigo-400 font-normal text-[10px]">({r.suggestedShipDate})</span>
+                                        )}
+                                      </>
+                                    )}
+                                    {r.type === 'invalid' && <span className="text-red-600 font-normal">{r.msg}</span>}
                                   </span>
                                   {/* Gap */}
                                   <span className="col-span-1 text-right">
