@@ -191,8 +191,8 @@ export default function App() {
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            // '고객 납기' 우선, 없으면 '납품일' fallback (기존 데이터 호환)
-            const partDate = row['고객 납기'] || row['납품일'] || '';
+            // 납기변경 감지는 반드시 고객 기준 날짜만 사용 (납품일=LOT partDate이므로 혼용 금지)
+            const partDate = row['고객 납기'] || '';
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
