@@ -213,6 +213,7 @@ export default function App() {
         let fcstHeaderIdx = -1;
         let reqDateIndices = [];
         let qtyIdx = -1;
+        let snIdx = -1; // 구매 S/N 컬럼 인덱스
 
         for (let i = 0; i < Math.min(5, fcstLines.length); i++) {
           const cols = fcstLines[i].split('\t').map(c => c.trim());
@@ -220,6 +221,8 @@ export default function App() {
           cols.forEach((c, idx) => {
             if (c.includes('필요납기')) indices.push(idx);
             if (c.includes('수량')) qtyIdx = idx;
+            // 구매 S/N 컬럼 감지: '구매S/N', '구매 S/N', 'S/N' 등 포함
+            if (snIdx === -1 && /구매.?s\/?n|^s\/?n$/i.test(c.replace(/\s/g, ''))) snIdx = idx;
           });
           if (indices.length > 0) {
             fcstHeaderIdx = i;
@@ -242,7 +245,15 @@ export default function App() {
           const isNew = cols.some(c => c && c.includes('신규'));
           if (!isNew) return;
 
-          const inputSN = cols[0] || '';
+          // S/N: 헤더에서 감지된 컬럼 우선, 없으면 숫자로만 이뤄진 값 탐색 (MEMORY/FOUNDRY 등 제외)
+          let inputSN = '';
+          if (snIdx !== -1) {
+            inputSN = cols[snIdx] || '';
+          } else {
+            // 헤더 미감지 시: 5자리 이상 숫자 패턴 찾기
+            const snCandidate = cols.find(c => /^\d{5,}$/.test(c));
+            inputSN = snCandidate || cols[0] || '';
+          }
           const rawLine = Object.keys(mappingRules.lineMap).find(key => cols.includes(key));
           const rawModel = Object.keys(mappingRules.modelMap).find(key => cols.includes(key));
           const fabName = rawLine ? mappingRules.lineMap[rawLine] : '';
