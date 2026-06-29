@@ -192,9 +192,8 @@ export default function App() {
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            const bigoNakgiMatch = bigo.match(/\[납기:([^\]]+)\]/);
-            const bigoNakgi = bigoNakgiMatch ? bigoNakgiMatch[1].trim() : '';
-            const partDate = normDate(row['고객 납기'] || bigoNakgi);
+            // 고객납기: 비고의 [납기:...] 태그에서만 읽음 (별도 컬럼 없음)
+            const partDate = normDate(extractNakgi(bigo));
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
@@ -287,8 +286,10 @@ export default function App() {
               unchangedCount += qty;
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '유지';
-                if (!existingData[e.idx]['고객 납기'] && reqDate) {
-                  existingData[e.idx]['고객 납기'] = reqDate;
+                // 비고에 [납기:...] 없으면 보완 (구버전 데이터 대응)
+                const bigo = existingData[e.idx]['비고'] || '';
+                if (!bigo.includes('[납기:') && reqDate) {
+                  existingData[e.idx]['비고'] = `[납기:${reqDate}]` + (bigo.trim() ? ` ${bigo}` : '');
                 }
               });
             } else {
@@ -296,13 +297,12 @@ export default function App() {
               changedItems.push({ sn: inputSN, oldDate: normExisting, newDate: normReq, clientName, fabName, model: modelInfo.model });
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
-                existingData[e.idx]['고객 납기'] = reqDate;
-                // 비고: [납기:...] 태그만 업데이트, 히스토리 누적 없음
+                // 비고의 [납기:...] 태그만 업데이트 (고객 납기 별도 컬럼 없음)
                 let prevBigo = existingData[e.idx]['비고'] || '';
                 if (prevBigo.includes('[납기:')) {
                   prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
                 } else {
-                  prevBigo = prevBigo.trim() ? `${prevBigo} [납기:${reqDate}]` : `[납기:${reqDate}]`;
+                  prevBigo = `[납기:${reqDate}]` + (prevBigo.trim() ? ` ${prevBigo}` : '');
                 }
                 existingData[e.idx]['비고'] = prevBigo;
               });
@@ -355,7 +355,6 @@ export default function App() {
               '그룹': 'Sales',
               '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
               '배정 LOT': assignedAtm, '비고': bigoArr.join(' '),
-              '고객 납기': reqDate,
               '납품일': lotPartDate,
               '생산완료일': prodEndDate, '출하가능일': shipAvailableDate,
               '_isNew': true, '_status': '신규',
@@ -453,6 +452,12 @@ export default function App() {
     return m ? m[1] : '-';
   };
 
+  // 비고에서 고객납기 추출: [납기:YYYY-MM-DD]
+  const extractNakgi = (bigo) => {
+    const m = (bigo || '').match(/\[납기:([^\]]+)\]/);
+    return m ? m[1].trim() : '';
+  };
+
   const applyLotChange = (sn, suggestedLotId) => {
     const allLots = [
       ...mappingRules.atmMaster,
@@ -508,7 +513,7 @@ export default function App() {
     const groups = {};
     baseResults.forEach((row) => {
       const lotId = row['배정 LOT'] || row['배정LOT'];
-      const reqDate = row['고객 납기'] || row['납품일'];
+      const reqDate = extractNakgi(row['비고']);
       const group = row['그룹'] || '';
       if (!lotId || !reqDate || lotId === '-' || lotId === '' || lotId === '미배정') return;
       if (group !== 'Sales') return;
@@ -521,8 +526,8 @@ export default function App() {
     const groupResults = Object.entries(groups).map(([key, { clientName, modelName, items }]) => {
       const itemResults = items.map(item => {
         const currentLotId = item['배정 LOT'] || item['배정LOT'];
-        // 고객 납기 기준으로 LOT 적합성 판단 (납품일=LOT partDate이므로 혼용 방지)
-        const reqDate = item['고객 납기'] || item['납품일'];
+        // 고객납기는 비고의 [납기:...] 태그에서 추출 (별도 컬럼 없음)
+        const reqDate = extractNakgi(item['비고']);
         const reqDateObj = new Date(reqDate);
         const sn = extractSN(item['비고']);
 
