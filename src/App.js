@@ -184,16 +184,25 @@ export default function App() {
         }
 
         // ── SOMP S/N 인덱스 생성 ───────────────────────────
-        // 고객납기 소스 우선순위: 고객 납기 컬럼 → 비고의 [납기:...] 태그
-        // 납품일은 사용하지 않음 (LOT partDate로 의미 변경됨)
+        // 고객납기 소스 우선순위:
+        //   1. 비고의 [납기:...] 태그 (신규 데이터, 가장 신뢰)
+        //   2. 납품일 — LOT 날짜가 아닌 경우만 (구버전 데이터: 납품일=고객날짜였던 시절)
+        //   3. 빈 문자열 → 유지 처리 (날짜 비교 불가, 오탐 방지)
+        const allLotDates = new Set([
+          ...mappingRules.atmMaster,
+          ...(mappingRules.vacGeneralMaster || []),
+          ...(mappingRules.vacDecMaster || []),
+        ].flatMap(l => [l.partDate, l.prodDate, l.shipDate].filter(Boolean)));
+
         const sompSNMap = {};
         existingData.forEach((row, idx) => {
           const bigo = row['비고'] || '';
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            // 고객납기: 비고의 [납기:...] 태그에서만 읽음 (별도 컬럼 없음)
-            const partDate = normDate(extractNakgi(bigo));
+            const nakgiFromBigo = extractNakgi(bigo);
+            const nakgiFromPartDate = (!allLotDates.has(row['납품일']) && row['납품일']) ? row['납품일'] : '';
+            const partDate = normDate(nakgiFromBigo || nakgiFromPartDate);
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
