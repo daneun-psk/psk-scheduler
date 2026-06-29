@@ -518,6 +518,14 @@ export default function App() {
     return m ? m[1].trim() : '';
   };
 
+  const deleteCandidate = (sn) => {
+    setResults(prev => prev.filter(row => extractSN(row['비고']) !== sn));
+    setAnalysisResult(prev => prev ? {
+      ...prev,
+      deletedCandidates: prev.deletedCandidates.filter(c => c.sn !== sn),
+    } : prev);
+  };
+
   const applyLotChange = (sn, suggestedLotId) => {
     const allLots = [
       ...mappingRules.atmMaster,
@@ -1110,19 +1118,23 @@ export default function App() {
                         <span className="text-red-500 text-xs">건</span>
                       </div>
                       {analysisResult.deletedCandidates.length > 0 ? (
-                        <ul className="text-xs text-red-700 space-y-1 max-h-28 overflow-y-auto">
+                        <ul className="text-xs text-red-700 space-y-1 max-h-40 overflow-y-auto">
                           {analysisResult.deletedCandidates.map((item, i) => (
-                            <li key={i} className="flex gap-1 items-center">
+                            <li key={i} className="flex gap-1 items-center bg-white rounded px-2 py-1 border border-red-100">
                               <span className="font-bold shrink-0">S/N {item.sn}</span>
                               <span className="text-red-300">|</span>
-                              <span>{item.clientName}</span>
+                              <span className="truncate">{item.clientName}</span>
                               <span className="text-red-300">|</span>
-                              <span className="text-red-500">{item.partDate}</span>
+                              <span className="text-red-500 shrink-0">{item.partDate || '-'}</span>
+                              <button
+                                onClick={() => deleteCandidate(item.sn)}
+                                className="ml-auto shrink-0 px-2 py-0.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold"
+                              >삭제</button>
                             </li>
                           ))}
                         </ul>
                       ) : <p className="text-xs text-red-400">삭제 후보 없음</p>}
-                      <p className="text-xs text-red-400 mt-2 border-t border-red-200 pt-1">* 이번 FCST에 미포함 — 직접 확인 후 삭제 여부 판단</p>
+                      <p className="text-xs text-red-400 mt-2 border-t border-red-200 pt-1">* 이번 FCST에 미포함 — 삭제 버튼으로 즉시 제거 가능</p>
                     </div>
                   </div>
                 </div>
