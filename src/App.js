@@ -183,38 +183,18 @@ export default function App() {
           }
         }
 
-        // ── 구버전 데이터 마이그레이션 ──────────────────────
-        // 고객 납기 필드가 없는 구버전 행: 납품일이 고객날짜였으므로 복사
-        const allLotDates = new Set([
-          ...mappingRules.atmMaster,
-          ...(mappingRules.vacGeneralMaster || []),
-          ...(mappingRules.vacDecMaster || []),
-        ].flatMap(l => [l.partDate, l.prodDate, l.shipDate].filter(Boolean)));
-
-        existingData.forEach(row => {
-          if (!('고객 납기' in row) && row['납품일'] && !allLotDates.has(row['납품일'])) {
-            row['고객 납기'] = row['납품일'];
-          }
-        });
-
         // ── SOMP S/N 인덱스 생성 ───────────────────────────
-        // { sn: [{ idx, partDate }] }
+        // 고객납기 소스 우선순위: 고객 납기 컬럼 → 비고의 [납기:...] 태그
+        // 납품일은 사용하지 않음 (LOT partDate로 의미 변경됨)
         const sompSNMap = {};
         existingData.forEach((row, idx) => {
           const bigo = row['비고'] || '';
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            // 고객 납기 필드가 있으면 사용, 없으면(구버전 데이터) 납품일 fallback
-            // 구버전: 납품일=고객날짜 / 신버전: 납품일=LOT partDate, 고객 납기=고객날짜
-            // 우선순위: 고객 납기 컬럼 → 비고의 [납기:...] 태그 → 납품일(LOT 날짜 아닌 경우) → 빈 문자열
             const bigoNakgiMatch = bigo.match(/\[납기:([^\]]+)\]/);
             const bigoNakgi = bigoNakgiMatch ? bigoNakgiMatch[1].trim() : '';
-            const partDate = (row['고객 납기'])
-              ? row['고객 납기']
-              : bigoNakgi
-              ? bigoNakgi
-              : (!allLotDates.has(row['납품일']) ? (row['납품일'] || '') : '');
+            const partDate = normDate(row['고객 납기'] || bigoNakgi);
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
