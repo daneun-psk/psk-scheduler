@@ -199,6 +199,12 @@ export default function App() {
     ]
   };
 
+  const mergeLots = (saved, defaults) => {
+    const savedIds = new Set((saved || []).map(l => l.id));
+    const newFromDefaults = defaults.filter(l => !savedIds.has(l.id));
+    return [...(saved || []), ...newFromDefaults].sort((a, b) => new Date(a.partDate) - new Date(b.partDate));
+  };
+
   const [mappingRules, setMappingRules] = useState(() => {
     const saved = localStorage.getItem('pskMasterData_v4');
     const parsed = saved ? JSON.parse(saved) : null;
@@ -206,8 +212,9 @@ export default function App() {
       return {
         ...defaultRules,
         ...parsed,
-        vacGeneralMaster: parsed.vacGeneralMaster || defaultRules.vacGeneralMaster,
-        vacDecMaster: parsed.vacDecMaster || defaultRules.vacDecMaster,
+        atmMaster: mergeLots(parsed.atmMaster, defaultRules.atmMaster),
+        vacGeneralMaster: mergeLots(parsed.vacGeneralMaster, defaultRules.vacGeneralMaster),
+        vacDecMaster: mergeLots(parsed.vacDecMaster, defaultRules.vacDecMaster),
       };
     }
     return defaultRules;
