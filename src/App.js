@@ -183,6 +183,20 @@ export default function App() {
           }
         }
 
+        // ── 구버전 데이터 마이그레이션 ──────────────────────
+        // 고객 납기 필드가 없는 구버전 행: 납품일이 고객날짜였으므로 복사
+        const allLotDates = new Set([
+          ...mappingRules.atmMaster,
+          ...(mappingRules.vacGeneralMaster || []),
+          ...(mappingRules.vacDecMaster || []),
+        ].flatMap(l => [l.partDate, l.prodDate, l.shipDate].filter(Boolean)));
+
+        existingData.forEach(row => {
+          if (!('고객 납기' in row) && row['납품일'] && !allLotDates.has(row['납품일'])) {
+            row['고객 납기'] = row['납품일'];
+          }
+        });
+
         // ── SOMP S/N 인덱스 생성 ───────────────────────────
         // { sn: [{ idx, partDate }] }
         const sompSNMap = {};
@@ -191,8 +205,11 @@ export default function App() {
           const m = bigo.match(/\[S\/N:([^\]]+)\]/);
           if (m) {
             const sn = m[1];
-            // 납기변경 감지는 반드시 고객 기준 날짜만 사용 (납품일=LOT partDate이므로 혼용 금지)
-            const partDate = row['고객 납기'] || '';
+            // 고객 납기 필드가 있으면 사용, 없으면(구버전 데이터) 납품일 fallback
+            // 구버전: 납품일=고객날짜 / 신버전: 납품일=LOT partDate, 고객 납기=고객날짜
+            const partDate = ('고객 납기' in row && row['고객 납기'])
+              ? row['고객 납기']
+              : (row['납품일'] || '');
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
