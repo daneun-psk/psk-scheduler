@@ -317,26 +317,31 @@ export default function App() {
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
                 existingData[e.idx]['고객 납기'] = reqDate;
-                // 비고의 [납기:...] 태그 업데이트 (컬럼 유실 시에도 고객납기 추적 가능)
+                // 비고: [납기:...] 태그만 업데이트, 히스토리 누적 없음
                 let prevBigo = existingData[e.idx]['비고'] || '';
-                prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
-                if (!prevBigo.includes('[납기:')) prevBigo = `[납기:${reqDate}] ` + prevBigo;
-                existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${normExisting}→${normReq}]`;
+                if (prevBigo.includes('[납기:')) {
+                  prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
+                } else {
+                  prevBigo = prevBigo.trim() ? `${prevBigo} [납기:${reqDate}]` : `[납기:${reqDate}]`;
+                }
+                existingData[e.idx]['비고'] = prevBigo;
               });
             }
             return; // 중복 추가 방지
           }
 
           // ── 신규 처리 ──────────────────────────────────
+          // 신규 처리 시 진단 메시지 수집 (대시보드용, 비고 미포함)
+          const diagMsgs = [];
+          if (!rawLine) diagMsgs.push('라인 미등록');
+          if (!rawModel) diagMsgs.push('모델 미등록');
+          if (!reqDate) diagMsgs.push('납품일 누락');
+          if (isDateChanged) diagMsgs.push(`납기변경(${prevReqDate}→${reqDate})`);
+
           const reqDateObj = reqDate ? new Date(reqDate) : null;
           for (let i = 0; i < qty; i++) {
             let assignedAtm = '', lotPartDate = '', prodEndDate = '', shipAvailableDate = '';
-            let remarksArr = [];
-
-            if (!rawLine) remarksArr.push('라인 미등록');
-            if (!rawModel) remarksArr.push('모델 미등록');
-            if (!reqDate) remarksArr.push('납품일 누락');
-            if (isDateChanged) remarksArr.push(`납기변경(${prevReqDate} ➡️ ${reqDate})`);
+            let capaWarning = '';
 
             if (reqDateObj) {
               let matchedAtm = null;
@@ -355,24 +360,26 @@ export default function App() {
                 prodEndDate = matchedAtm.prodDate;
                 shipAvailableDate = matchedAtm.shipDate;
                 const currentLoad = atmLoad[matchedAtm.id] + 1;
-                if (currentLoad > matchedAtm.maxCapa) remarksArr.push(`CAPA초과 (${currentLoad}/${matchedAtm.maxCapa})`);
+                if (currentLoad > matchedAtm.maxCapa) capaWarning = `CAPA초과(${currentLoad}/${matchedAtm.maxCapa})`;
                 atmLoad[matchedAtm.id] = currentLoad;
-              } else {
-                remarksArr.push('적합한 ATM없음');
               }
             }
 
-            if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
-            if (reqDate) remarksArr.unshift(`[납기:${reqDate}]`);
-            if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
+            // 비고: [S/N:xxx] [납기:YYYY-MM-DD] 만 유지 (나머지는 대시보드)
+            const bigoArr = [];
+            if (inputSN) bigoArr.push(`[S/N:${inputSN}]`);
+            if (reqDate) bigoArr.push(`[납기:${reqDate}]`);
+            if (capaWarning) bigoArr.push(capaWarning); // CAPA는 LOT 운영상 필요
 
             newItems.push({
               '그룹': 'Sales',
               '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
-              '배정 LOT': assignedAtm, '비고': remarksArr.join(', '),
+              '배정 LOT': assignedAtm, '비고': bigoArr.join(' '),
               '고객 납기': reqDate,
               '납품일': lotPartDate,
-              '생산완료일': prodEndDate, '출하가능일': shipAvailableDate, '_isNew': true, '_status': '신규'
+              '생산완료일': prodEndDate, '출하가능일': shipAvailableDate,
+              '_isNew': true, '_status': '신규',
+              '_diagMsgs': diagMsgs.length ? diagMsgs : undefined,
             });
           }
         });
@@ -416,7 +423,7 @@ export default function App() {
   const getHeaders = () => {
     if (results.length === 0) return [];
     const headerSet = new Set();
-    results.forEach(row => { Object.keys(row).forEach(key => { if (key !== '_isNew' && key !== '_status') headerSet.add(key); }); });
+    results.forEach(row => { Object.keys(row).forEach(key => { if (!key.startsWith('_')) headerSet.add(key); }); });
     return Array.from(headerSet);
   };
 
@@ -486,7 +493,7 @@ export default function App() {
         '납품일': newLot.partDate,
         '생산완료일': newLot.prodDate,
         '출하가능일': newLot.shipDate,
-        '비고': prevBigo + ` [LOT변경:${currentLotId}→${suggestedLotId}]`,
+        '비고': prevBigo, // 비고는 [S/N:] [납기:] 유지, LOT 변경 이력은 최적화 패널에서 확인
         _status: row._status === '납기변경' ? '납기변경' : '재배정',
       };
     });
