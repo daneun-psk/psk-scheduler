@@ -72,7 +72,47 @@ export default function App() {
       { id: 'ATM-137', partDate: '2026-11-23', prodDate: '2026-12-09', shipDate: '2026-12-10', maxCapa: 6 },
       { id: 'ATM-138', partDate: '2026-12-01', prodDate: '2026-12-17', shipDate: '2026-12-18', maxCapa: 6 },
       { id: 'ATM-139', partDate: '2026-12-09', prodDate: '2026-12-28', shipDate: '2026-12-29', maxCapa: 6 },
-      { id: 'ATM-140', partDate: '2026-12-17', prodDate: '2027-01-06', shipDate: '2027-01-07', maxCapa: 6 }
+      { id: 'ATM-140', partDate: '2026-12-17', prodDate: '2027-01-06', shipDate: '2027-01-07', maxCapa: 6 },
+      { id: 'ATM-27-101', partDate: '2027-01-05', prodDate: '2027-01-21', shipDate: '2027-01-22', maxCapa: 6 },
+      { id: 'ATM-27-102', partDate: '2027-01-13', prodDate: '2027-01-29', shipDate: '2027-02-01', maxCapa: 6 },
+      { id: 'ATM-27-103', partDate: '2027-01-21', prodDate: '2027-02-10', shipDate: '2027-02-11', maxCapa: 6 },
+      { id: 'ATM-27-104', partDate: '2027-01-29', prodDate: '2027-02-18', shipDate: '2027-02-19', maxCapa: 6 },
+      { id: 'ATM-27-105', partDate: '2027-02-10', prodDate: '2027-02-26', shipDate: '2027-03-02', maxCapa: 6 },
+      { id: 'ATM-27-106', partDate: '2027-02-18', prodDate: '2027-03-09', shipDate: '2027-03-10', maxCapa: 6 },
+      { id: 'ATM-27-107', partDate: '2027-02-26', prodDate: '2027-03-17', shipDate: '2027-03-18', maxCapa: 6 },
+      { id: 'ATM-27-108', partDate: '2027-03-09', prodDate: '2027-03-25', shipDate: '2027-03-26', maxCapa: 6 },
+      { id: 'ATM-27-109', partDate: '2027-03-17', prodDate: '2027-04-02', shipDate: '2027-04-05', maxCapa: 6 },
+      { id: 'ATM-27-110', partDate: '2027-03-25', prodDate: '2027-04-12', shipDate: '2027-04-13', maxCapa: 6 },
+      { id: 'ATM-27-111', partDate: '2027-04-02', prodDate: '2027-04-20', shipDate: '2027-04-21', maxCapa: 6 },
+      { id: 'ATM-27-112', partDate: '2027-04-12', prodDate: '2027-04-28', shipDate: '2027-04-29', maxCapa: 6 },
+      { id: 'ATM-27-113', partDate: '2027-04-20', prodDate: '2027-05-07', shipDate: '2027-05-10', maxCapa: 6 },
+      { id: 'ATM-27-114', partDate: '2027-04-28', prodDate: '2027-05-18', shipDate: '2027-05-19', maxCapa: 6 },
+      { id: 'ATM-27-115', partDate: '2027-05-07', prodDate: '2027-05-26', shipDate: '2027-05-27', maxCapa: 6 },
+      { id: 'ATM-27-116', partDate: '2027-05-18', prodDate: '2027-06-03', shipDate: '2027-06-04', maxCapa: 6 },
+      { id: 'ATM-27-117', partDate: '2027-05-26', prodDate: '2027-06-11', shipDate: '2027-06-14', maxCapa: 6 },
+      { id: 'ATM-27-118', partDate: '2027-06-03', prodDate: '2027-06-21', shipDate: '2027-06-22', maxCapa: 6 },
+      { id: 'ATM-27-119', partDate: '2027-06-11', prodDate: '2027-06-29', shipDate: '2027-06-30', maxCapa: 6 },
+      { id: 'ATM-27-120', partDate: '2027-06-21', prodDate: '2027-07-07', shipDate: '2027-07-08', maxCapa: 6 },
+      { id: 'ATM-27-121', partDate: '2027-06-29', prodDate: '2027-07-15', shipDate: '2027-07-16', maxCapa: 6 },
+      { id: 'ATM-27-122', partDate: '2027-07-07', prodDate: '2027-07-23', shipDate: '2027-07-26', maxCapa: 6 },
+      { id: 'ATM-27-123', partDate: '2027-07-15', prodDate: '2027-08-02', shipDate: '2027-08-03', maxCapa: 6 },
+      { id: 'ATM-27-124', partDate: '2027-07-23', prodDate: '2027-08-10', shipDate: '2027-08-11', maxCapa: 6 },
+      { id: 'ATM-27-125', partDate: '2027-08-02', prodDate: '2027-08-19', shipDate: '2027-08-20', maxCapa: 6 },
+      { id: 'ATM-27-126', partDate: '2027-08-10', prodDate: '2027-08-27', shipDate: '2027-08-30', maxCapa: 6 },
+      { id: 'ATM-27-127', partDate: '2027-08-19', prodDate: '2027-09-06', shipDate: '2027-09-07', maxCapa: 6 },
+      { id: 'ATM-27-128', partDate: '2027-08-27', prodDate: '2027-09-17', shipDate: '2027-09-20', maxCapa: 6 },
+      { id: 'ATM-27-129', partDate: '2027-09-06', prodDate: '2027-09-27', shipDate: '2027-09-28', maxCapa: 6 },
+      { id: 'ATM-27-130', partDate: '2027-09-17', prodDate: '2027-10-06', shipDate: '2027-10-07', maxCapa: 6 },
+      { id: 'ATM-27-131', partDate: '2027-09-27', prodDate: '2027-10-15', shipDate: '2027-10-18', maxCapa: 6 },
+      { id: 'ATM-27-132', partDate: '2027-10-06', prodDate: '2027-10-25', shipDate: '2027-10-26', maxCapa: 6 },
+      { id: 'ATM-27-133', partDate: '2027-10-15', prodDate: '2027-11-02', shipDate: '2027-11-03', maxCapa: 6 },
+      { id: 'ATM-27-134', partDate: '2027-10-25', prodDate: '2027-11-10', shipDate: '2027-11-11', maxCapa: 6 },
+      { id: 'ATM-27-135', partDate: '2027-11-02', prodDate: '2027-11-18', shipDate: '2027-11-19', maxCapa: 6 },
+      { id: 'ATM-27-136', partDate: '2027-11-10', prodDate: '2027-11-26', shipDate: '2027-11-29', maxCapa: 6 },
+      { id: 'ATM-27-137', partDate: '2027-11-18', prodDate: '2027-12-06', shipDate: '2027-12-07', maxCapa: 6 },
+      { id: 'ATM-27-138', partDate: '2027-11-26', prodDate: '2027-12-14', shipDate: '2027-12-15', maxCapa: 6 },
+      { id: 'ATM-27-139', partDate: '2027-12-06', prodDate: '2027-12-22', shipDate: '2027-12-23', maxCapa: 6 },
+      { id: 'ATM-27-140', partDate: '2027-12-14', prodDate: '2027-12-31', shipDate: '2028-01-03', maxCapa: 6 }
     ],
     vacGeneralMaster: [
       { id: 'VAC-201', partDate: '2026-01-06', prodDate: '2026-01-30', shipDate: '2026-02-02', maxCapa: 4 },
@@ -100,7 +140,34 @@ export default function App() {
       { id: 'VAC-223', partDate: '2026-10-28', prodDate: '2026-11-23', shipDate: '2026-11-24', maxCapa: 4 },
       { id: 'VAC-224', partDate: '2026-11-10', prodDate: '2026-12-04', shipDate: '2026-12-07', maxCapa: 4 },
       { id: 'VAC-225', partDate: '2026-11-23', prodDate: '2026-12-17', shipDate: '2026-12-18', maxCapa: 4 },
-      { id: 'VAC-226', partDate: '2026-12-04', prodDate: '2026-12-31', shipDate: '2027-01-04', maxCapa: 4 }
+      { id: 'VAC-226', partDate: '2026-12-04', prodDate: '2026-12-31', shipDate: '2027-01-04', maxCapa: 4 },
+      { id: 'VAC-27-201', partDate: '2027-01-05', prodDate: '2027-01-29', shipDate: '2027-02-01', maxCapa: 4 },
+      { id: 'VAC-27-202', partDate: '2027-01-18', prodDate: '2027-02-15', shipDate: '2027-02-16', maxCapa: 4 },
+      { id: 'VAC-27-203', partDate: '2027-01-29', prodDate: '2027-02-26', shipDate: '2027-03-02', maxCapa: 4 },
+      { id: 'VAC-27-204', partDate: '2027-02-15', prodDate: '2027-03-12', shipDate: '2027-03-15', maxCapa: 4 },
+      { id: 'VAC-27-205', partDate: '2027-02-26', prodDate: '2027-03-25', shipDate: '2027-03-26', maxCapa: 4 },
+      { id: 'VAC-27-206', partDate: '2027-03-12', prodDate: '2027-04-07', shipDate: '2027-04-08', maxCapa: 4 },
+      { id: 'VAC-27-207', partDate: '2027-03-25', prodDate: '2027-04-20', shipDate: '2027-04-21', maxCapa: 4 },
+      { id: 'VAC-27-208', partDate: '2027-04-07', prodDate: '2027-05-03', shipDate: '2027-05-04', maxCapa: 4 },
+      { id: 'VAC-27-209', partDate: '2027-04-20', prodDate: '2027-05-18', shipDate: '2027-05-19', maxCapa: 4 },
+      { id: 'VAC-27-210', partDate: '2027-05-03', prodDate: '2027-05-31', shipDate: '2027-06-01', maxCapa: 4 },
+      { id: 'VAC-27-211', partDate: '2027-05-18', prodDate: '2027-06-11', shipDate: '2027-06-14', maxCapa: 4 },
+      { id: 'VAC-27-212', partDate: '2027-05-31', prodDate: '2027-06-24', shipDate: '2027-06-25', maxCapa: 4 },
+      { id: 'VAC-27-213', partDate: '2027-06-11', prodDate: '2027-07-07', shipDate: '2027-07-08', maxCapa: 4 },
+      { id: 'VAC-27-214', partDate: '2027-06-24', prodDate: '2027-07-20', shipDate: '2027-07-21', maxCapa: 4 },
+      { id: 'VAC-27-215', partDate: '2027-07-07', prodDate: '2027-08-02', shipDate: '2027-08-03', maxCapa: 4 },
+      { id: 'VAC-27-216', partDate: '2027-07-20', prodDate: '2027-08-13', shipDate: '2027-08-17', maxCapa: 4 },
+      { id: 'VAC-27-217', partDate: '2027-08-02', prodDate: '2027-08-27', shipDate: '2027-08-30', maxCapa: 4 },
+      { id: 'VAC-27-218', partDate: '2027-08-13', prodDate: '2027-09-09', shipDate: '2027-09-10', maxCapa: 4 },
+      { id: 'VAC-27-219', partDate: '2027-08-27', prodDate: '2027-09-27', shipDate: '2027-09-28', maxCapa: 4 },
+      { id: 'VAC-27-220', partDate: '2027-09-09', prodDate: '2027-10-12', shipDate: '2027-10-13', maxCapa: 4 },
+      { id: 'VAC-27-221', partDate: '2027-09-27', prodDate: '2027-10-25', shipDate: '2027-10-26', maxCapa: 4 },
+      { id: 'VAC-27-222', partDate: '2027-10-12', prodDate: '2027-11-05', shipDate: '2027-11-08', maxCapa: 4 },
+      { id: 'VAC-27-223', partDate: '2027-10-25', prodDate: '2027-11-18', shipDate: '2027-11-19', maxCapa: 4 },
+      { id: 'VAC-27-224', partDate: '2027-11-05', prodDate: '2027-12-01', shipDate: '2027-12-02', maxCapa: 4 },
+      { id: 'VAC-27-225', partDate: '2027-11-18', prodDate: '2027-12-14', shipDate: '2027-12-15', maxCapa: 4 },
+      { id: 'VAC-27-226', partDate: '2027-12-01', prodDate: '2027-12-28', shipDate: '2027-12-29', maxCapa: 4 },
+      { id: 'VAC-27-227', partDate: '2027-12-14', prodDate: '2028-01-10', shipDate: '2028-01-11', maxCapa: 4 }
     ],
     vacDecMaster: [
       { id: 'DEC-201', partDate: '2026-01-06', prodDate: '2026-02-23', shipDate: '2026-02-24', maxCapa: 4 },
@@ -115,7 +182,20 @@ export default function App() {
       { id: 'DEC-219', partDate: '2026-09-02', prodDate: '2026-10-21', shipDate: '2026-10-22', maxCapa: 4 },
       { id: 'DEC-221', partDate: '2026-09-30', prodDate: '2026-11-16', shipDate: '2026-11-17', maxCapa: 4 },
       { id: 'DEC-223', partDate: '2026-10-28', prodDate: '2026-12-10', shipDate: '2026-12-11', maxCapa: 4 },
-      { id: 'DEC-225', partDate: '2026-11-23', prodDate: '2027-01-07', shipDate: '2027-01-08', maxCapa: 4 }
+      { id: 'DEC-225', partDate: '2026-11-23', prodDate: '2027-01-07', shipDate: '2027-01-08', maxCapa: 4 },
+      { id: 'DEC-27-201', partDate: '2027-01-05', prodDate: '2027-02-19', shipDate: '2027-02-22', maxCapa: 4 },
+      { id: 'DEC-27-203', partDate: '2027-01-29', prodDate: '2027-03-18', shipDate: '2027-03-19', maxCapa: 4 },
+      { id: 'DEC-27-205', partDate: '2027-02-26', prodDate: '2027-04-13', shipDate: '2027-04-14', maxCapa: 4 },
+      { id: 'DEC-27-207', partDate: '2027-03-25', prodDate: '2027-05-10', shipDate: '2027-05-11', maxCapa: 4 },
+      { id: 'DEC-27-209', partDate: '2027-04-20', prodDate: '2027-06-04', shipDate: '2027-06-07', maxCapa: 4 },
+      { id: 'DEC-27-211', partDate: '2027-05-18', prodDate: '2027-06-30', shipDate: '2027-07-01', maxCapa: 4 },
+      { id: 'DEC-27-213', partDate: '2027-06-11', prodDate: '2027-07-26', shipDate: '2027-07-27', maxCapa: 4 },
+      { id: 'DEC-27-215', partDate: '2027-07-07', prodDate: '2027-08-20', shipDate: '2027-08-23', maxCapa: 4 },
+      { id: 'DEC-27-217', partDate: '2027-08-02', prodDate: '2027-09-20', shipDate: '2027-09-21', maxCapa: 4 },
+      { id: 'DEC-27-219', partDate: '2027-08-27', prodDate: '2027-10-18', shipDate: '2027-10-19', maxCapa: 4 },
+      { id: 'DEC-27-221', partDate: '2027-09-27', prodDate: '2027-11-11', shipDate: '2027-11-12', maxCapa: 4 },
+      { id: 'DEC-27-223', partDate: '2027-10-25', prodDate: '2027-12-07', shipDate: '2027-12-08', maxCapa: 4 },
+      { id: 'DEC-27-225', partDate: '2027-11-18', prodDate: '2027-12-31', shipDate: '2028-01-03', maxCapa: 4 }
     ]
   };
 
@@ -762,6 +842,7 @@ export default function App() {
 
   const [newAtm, setNewAtm] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 6 });
   const [searchAtm, setSearchAtm] = useState('');
+  const [atmYearFilter, setAtmYearFilter] = useState('all');
   const [editAtmId, setEditAtmId] = useState(null);
   const [editAtmVal, setEditAtmVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 6 });
   const [showBulkAtm, setShowBulkAtm] = useState(false);
@@ -770,6 +851,7 @@ export default function App() {
   // VAC General
   const [newVacGeneral, setNewVacGeneral] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [searchVacGeneral, setSearchVacGeneral] = useState('');
+  const [vacGeneralYearFilter, setVacGeneralYearFilter] = useState('all');
   const [editVacGeneralId, setEditVacGeneralId] = useState(null);
   const [editVacGeneralVal, setEditVacGeneralVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [showBulkVacGeneral, setShowBulkVacGeneral] = useState(false);
@@ -778,6 +860,7 @@ export default function App() {
   // VAC DEC
   const [newVacDec, setNewVacDec] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [searchVacDec, setSearchVacDec] = useState('');
+  const [vacDecYearFilter, setVacDecYearFilter] = useState('all');
   const [editVacDecId, setEditVacDecId] = useState(null);
   const [editVacDecVal, setEditVacDecVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [showBulkVacDec, setShowBulkVacDec] = useState(false);
@@ -939,9 +1022,14 @@ export default function App() {
   const filteredModels = Object.entries(mappingRules.modelMap).filter(([raw, info]) =>
     raw.toLowerCase().includes(searchModel.toLowerCase()) || info.model.toLowerCase().includes(searchModel.toLowerCase())
   );
-  const filteredAtms = mappingRules.atmMaster.filter(atm => atm.id.toLowerCase().includes(searchAtm.toLowerCase()));
-  const filteredVacGenerals = (mappingRules.vacGeneralMaster || []).filter(v => v.id.toLowerCase().includes(searchVacGeneral.toLowerCase()));
-  const filteredVacDecs = (mappingRules.vacDecMaster || []).filter(v => v.id.toLowerCase().includes(searchVacDec.toLowerCase()));
+  const applyYearFilter = (items, yearFilter) => {
+    if (yearFilter === '2026') return items.filter(i => !i.id.includes('-27-'));
+    if (yearFilter === '2027') return items.filter(i => i.id.includes('-27-'));
+    return items;
+  };
+  const filteredAtms = applyYearFilter(mappingRules.atmMaster, atmYearFilter).filter(atm => atm.id.toLowerCase().includes(searchAtm.toLowerCase()));
+  const filteredVacGenerals = applyYearFilter(mappingRules.vacGeneralMaster || [], vacGeneralYearFilter).filter(v => v.id.toLowerCase().includes(searchVacGeneral.toLowerCase()));
+  const filteredVacDecs = applyYearFilter(mappingRules.vacDecMaster || [], vacDecYearFilter).filter(v => v.id.toLowerCase().includes(searchVacDec.toLowerCase()));
 
   // 공통 스케줄 테이블 렌더러
   const renderScheduleTable = ({ items, editId, editVal, setEditVal, onEdit, onSave, onCancel, onRemove, thColor = 'text-gray-600' }) => (
@@ -1559,7 +1647,14 @@ export default function App() {
               {/* ATM 스케줄 */}
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><CalendarClock className="text-green-600" /> ATM 스케줄</h4>
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><CalendarClock className="text-green-600" /> ATM 스케줄</h4>
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                      {['all','2026','2027'].map(y => (
+                        <button key={y} onClick={() => setAtmYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${atmYearFilter===y ? 'bg-green-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3">
                     <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input placeholder="ATM ID 검색..." className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-gray-50 outline-none w-64" value={searchAtm} onChange={e => setSearchAtm(e.target.value)} /></div>
                     <button onClick={() => setShowBulkAtm(!showBulkAtm)} className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-700 transition"><Upload size={16}/> 스마트 대량 등록</button>
@@ -1591,7 +1686,14 @@ export default function App() {
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-teal-600" /> VAC General 스케줄</h4>
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-teal-600" /> VAC General 스케줄</h4>
+                      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                        {['all','2026','2027'].map(y => (
+                          <button key={y} onClick={() => setVacGeneralYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacGeneralYearFilter===y ? 'bg-teal-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                        ))}
+                      </div>
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5 ml-7">SUPRA XP, INTEGER plus</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1625,7 +1727,14 @@ export default function App() {
               <div className="bg-white rounded-xl shadow border p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-purple-600" /> VAC DEC 스케줄</h4>
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-purple-600" /> VAC DEC 스케줄</h4>
+                      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                        {['all','2026','2027'].map(y => (
+                          <button key={y} onClick={() => setVacDecYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacDecYearFilter===y ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                        ))}
+                      </div>
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5 ml-7">PRECIA, OMNIS plus, ZIVIS XP</p>
                   </div>
                   <div className="flex items-center gap-3">
