@@ -207,9 +207,10 @@ export default function App() {
             const sn = m[1];
             // 고객 납기 필드가 있으면 사용, 없으면(구버전 데이터) 납품일 fallback
             // 구버전: 납품일=고객날짜 / 신버전: 납품일=LOT partDate, 고객 납기=고객날짜
-            const partDate = ('고객 납기' in row && row['고객 납기'])
+            // 우선순위: 고객 납기 → 납품일(단, LOT 날짜가 아닌 경우만) → 빈 문자열
+            const partDate = (row['고객 납기'])
               ? row['고객 납기']
-              : (row['납품일'] || '');
+              : (!allLotDates.has(row['납품일']) ? (row['납품일'] || '') : '');
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
           }
