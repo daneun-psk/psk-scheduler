@@ -233,6 +233,8 @@ export default function App() {
   // ==========================================
   // 배정 로직 (FCST 스케줄러 탭)
   // 날짜 정규화: 포맷 통일 후 YYYY-MM-DD 문자열 반환 (비교용)
+  const displayLotId = (id) => id ? id.replace(/^(ATM|VAC|DEC)-27-/, '$1-') : id;
+
   const normDate = (d) => {
     if (!d) return '';
     const s = String(d).trim().replace(/\./g, '-').replace(/\//g, '-');
@@ -794,7 +796,7 @@ export default function App() {
 
       results.forEach(row => {
         const rowData = {};
-        headers.forEach(h => { rowData[h] = row[h] || ''; });
+        headers.forEach(h => { rowData[h] = (h === '배정 LOT' || h === '배정LOT') ? displayLotId(row[h] || '') : (row[h] || ''); });
         worksheet.addRow(rowData);
       });
 
@@ -849,7 +851,7 @@ export default function App() {
 
   const [newAtm, setNewAtm] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 6 });
   const [searchAtm, setSearchAtm] = useState('');
-  const [atmYearFilter, setAtmYearFilter] = useState('all');
+  const [atmYearFilter, setAtmYearFilter] = useState('2027');
   const [editAtmId, setEditAtmId] = useState(null);
   const [editAtmVal, setEditAtmVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 6 });
   const [showBulkAtm, setShowBulkAtm] = useState(false);
@@ -858,7 +860,7 @@ export default function App() {
   // VAC General
   const [newVacGeneral, setNewVacGeneral] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [searchVacGeneral, setSearchVacGeneral] = useState('');
-  const [vacGeneralYearFilter, setVacGeneralYearFilter] = useState('all');
+  const [vacGeneralYearFilter, setVacGeneralYearFilter] = useState('2027');
   const [editVacGeneralId, setEditVacGeneralId] = useState(null);
   const [editVacGeneralVal, setEditVacGeneralVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [showBulkVacGeneral, setShowBulkVacGeneral] = useState(false);
@@ -867,7 +869,7 @@ export default function App() {
   // VAC DEC
   const [newVacDec, setNewVacDec] = useState({ id: '', partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [searchVacDec, setSearchVacDec] = useState('');
-  const [vacDecYearFilter, setVacDecYearFilter] = useState('all');
+  const [vacDecYearFilter, setVacDecYearFilter] = useState('2027');
   const [editVacDecId, setEditVacDecId] = useState(null);
   const [editVacDecVal, setEditVacDecVal] = useState({ partDate: '', prodDate: '', shipDate: '', capa: 4 });
   const [showBulkVacDec, setShowBulkVacDec] = useState(false);
@@ -1031,8 +1033,7 @@ export default function App() {
   );
   const applyYearFilter = (items, yearFilter) => {
     if (yearFilter === '2026') return items.filter(i => !i.id.includes('-27-'));
-    if (yearFilter === '2027') return items.filter(i => i.id.includes('-27-'));
-    return items;
+    return items.filter(i => i.id.includes('-27-'));
   };
   const filteredAtms = applyYearFilter(mappingRules.atmMaster, atmYearFilter).filter(atm => atm.id.toLowerCase().includes(searchAtm.toLowerCase()));
   const filteredVacGenerals = applyYearFilter(mappingRules.vacGeneralMaster || [], vacGeneralYearFilter).filter(v => v.id.toLowerCase().includes(searchVacGeneral.toLowerCase()));
@@ -1055,7 +1056,7 @@ export default function App() {
         <tbody className="divide-y">
           {items.map((item, idx) => (
             <tr key={idx} className="hover:bg-gray-50 group transition-colors">
-              <td className="px-4 py-3 font-bold text-gray-800">{item.id}</td>
+              <td className="px-4 py-3 font-bold text-gray-800">{displayLotId(item.id)}</td>
               {editId === item.id ? (
                 <>
                   <td className="px-2 py-2"><input type="date" className="border p-1 text-xs rounded w-full" value={editVal.partDate} onChange={e => setEditVal({...editVal, partDate: e.target.value})} /></td>
@@ -1428,7 +1429,7 @@ export default function App() {
                                   </span>
                                   {/* 현재 LOT */}
                                   <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
-                                    {r.currentLotId}
+                                    {displayLotId(r.currentLotId)}
                                     {r.currentShipDate && (
                                       <span className="ml-1 text-gray-400 font-normal text-[10px]">({r.currentShipDate})</span>
                                     )}
@@ -1441,7 +1442,7 @@ export default function App() {
                                   <span className="col-span-2 font-bold text-indigo-700">
                                     {r.type === 'improve' && (
                                       <>
-                                        {r.suggestedLotId}
+                                        {displayLotId(r.suggestedLotId)}
                                         {r.suggestedShipDate && (
                                           <span className="ml-1 text-indigo-400 font-normal text-[10px]">({r.suggestedShipDate})</span>
                                         )}
@@ -1527,7 +1528,8 @@ export default function App() {
                                   if (row[key] && row[key].includes('ATM없음')) tdClass += " text-red-600 font-bold";
                                   if (row[key] && row[key].includes('납기변경')) tdClass += " text-amber-700 font-bold";
                                 }
-                                return <td key={j} className={tdClass}>{row[key] || '-'}</td>;
+                                const cellVal = (key === '배정 LOT' || key === '배정LOT') ? displayLotId(row[key] || '') : (row[key] || '-');
+                                return <td key={j} className={tdClass}>{cellVal || '-'}</td>;
                               })}
                             </tr>
                           );
@@ -1657,8 +1659,8 @@ export default function App() {
                   <div className="flex items-center gap-3">
                     <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><CalendarClock className="text-green-600" /> ATM 스케줄</h4>
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                      {['all','2026','2027'].map(y => (
-                        <button key={y} onClick={() => setAtmYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${atmYearFilter===y ? 'bg-green-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                      {['2026','2027'].map(y => (
+                        <button key={y} onClick={() => setAtmYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${atmYearFilter===y ? 'bg-green-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y}</button>
                       ))}
                     </div>
                   </div>
@@ -1696,8 +1698,8 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-teal-600" /> VAC General 스케줄</h4>
                       <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                        {['all','2026','2027'].map(y => (
-                          <button key={y} onClick={() => setVacGeneralYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacGeneralYearFilter===y ? 'bg-teal-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                        {['2026','2027'].map(y => (
+                          <button key={y} onClick={() => setVacGeneralYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacGeneralYearFilter===y ? 'bg-teal-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y}</button>
                         ))}
                       </div>
                     </div>
@@ -1737,8 +1739,8 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <h4 className="font-bold flex items-center gap-2 text-lg text-gray-800"><Layers className="text-purple-600" /> VAC DEC 스케줄</h4>
                       <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                        {['all','2026','2027'].map(y => (
-                          <button key={y} onClick={() => setVacDecYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacDecYearFilter===y ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y==='all'?'전체':y}</button>
+                        {['2026','2027'].map(y => (
+                          <button key={y} onClick={() => setVacDecYearFilter(y)} className={`px-3 py-1 rounded-md text-xs font-bold transition ${vacDecYearFilter===y ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:bg-gray-200'}`}>{y}</button>
                         ))}
                       </div>
                     </div>
