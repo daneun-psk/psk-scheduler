@@ -207,9 +207,13 @@ export default function App() {
             const sn = m[1];
             // 고객 납기 필드가 있으면 사용, 없으면(구버전 데이터) 납품일 fallback
             // 구버전: 납품일=고객날짜 / 신버전: 납품일=LOT partDate, 고객 납기=고객날짜
-            // 우선순위: 고객 납기 → 납품일(단, LOT 날짜가 아닌 경우만) → 빈 문자열
+            // 우선순위: 고객 납기 컬럼 → 비고의 [납기:...] 태그 → 납품일(LOT 날짜 아닌 경우) → 빈 문자열
+            const bigoNakgiMatch = bigo.match(/\[납기:([^\]]+)\]/);
+            const bigoNakgi = bigoNakgiMatch ? bigoNakgiMatch[1].trim() : '';
             const partDate = (row['고객 납기'])
               ? row['고객 납기']
+              : bigoNakgi
+              ? bigoNakgi
               : (!allLotDates.has(row['납품일']) ? (row['납품일'] || '') : '');
             if (!sompSNMap[sn]) sompSNMap[sn] = [];
             sompSNMap[sn].push({ idx, partDate });
@@ -313,7 +317,10 @@ export default function App() {
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
                 existingData[e.idx]['고객 납기'] = reqDate;
-                const prevBigo = existingData[e.idx]['비고'] || '';
+                // 비고의 [납기:...] 태그 업데이트 (컬럼 유실 시에도 고객납기 추적 가능)
+                let prevBigo = existingData[e.idx]['비고'] || '';
+                prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
+                if (!prevBigo.includes('[납기:')) prevBigo = `[납기:${reqDate}] ` + prevBigo;
                 existingData[e.idx]['비고'] = prevBigo + ` [납기변경:${normExisting}→${normReq}]`;
               });
             }
@@ -356,6 +363,7 @@ export default function App() {
             }
 
             if (remarksArr.length === 0) remarksArr.push('신규 자동배정');
+            if (reqDate) remarksArr.unshift(`[납기:${reqDate}]`);
             if (inputSN) remarksArr.unshift(`[S/N:${inputSN}]`);
 
             newItems.push({
