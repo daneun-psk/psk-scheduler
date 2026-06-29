@@ -289,7 +289,11 @@ export default function App() {
             }
           }
 
-          const reqDate = rawDate.replace(/\./g, '-');
+          // 날짜 유효성 확인 — TBD, -, 미정 등 비날짜 값은 미지정 처리
+          const isValidDate = (d) => d && /^\d{4}[-./]\d{1,2}[-./]\d{1,2}/.test(d.trim());
+          const rawDateNorm = rawDate.replace(/\./g, '-');
+          const reqDate = isValidDate(rawDateNorm) ? rawDateNorm : '';
+          const isDateUnspecified = rawDate.trim() !== '' && !reqDate; // TBD 등 값은 있지만 날짜 아님
           const prevReqDate = prevDateRaw.replace(/\./g, '-');
           if (inputSN) fcstSNSet.add(inputSN);
 
@@ -300,24 +304,55 @@ export default function App() {
             const existingDate = existingEntries[0].partDate;
             const normExisting = normDate(existingDate);
             const normReq = normDate(reqDate);
+            const existingWasUnspecified = !normExisting || existingDate === '미지정';
 
-            if (!normExisting || normExisting === normReq) {
-              // 유지 — 날짜 없거나 동일 (날짜 없으면 고객 납기 보완)
+            if (normExisting === normReq) {
+              // 완전 유지 (날짜 동일)
               unchangedCount += qty;
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '유지';
-                // 비고에 [납기:...] 없으면 보완 (구버전 데이터 대응)
                 const bigo = existingData[e.idx]['비고'] || '';
                 if (!bigo.includes('[납기:') && reqDate) {
                   existingData[e.idx]['비고'] = `[납기:${reqDate}]` + (bigo.trim() ? ` ${bigo}` : '');
                 }
               });
-            } else {
-              // 납기변경 — 고객 납기만 업데이트 (납품일=LOT partDate는 건드리지 않음)
+            } else if (existingWasUnspecified && reqDate) {
+              // 미지정 → 날짜 확정: 기존 행에 LOT 배정 및 날짜 업데이트
+              const reqDateObj = new Date(reqDate);
+              reqDateObj.setHours(0, 0, 0, 0);
+              let matchedAtm = null;
+              for (let j = mappingRules.atmMaster.length - 1; j >= 0; j--) {
+                const atm = mappingRules.atmMaster[j];
+                if (!atm.shipDate) continue;
+                const shipObj = new Date(atm.shipDate);
+                shipObj.setHours(0, 0, 0, 0);
+                if (shipObj <= reqDateObj) { matchedAtm = atm; break; }
+              }
+              existingEntries.forEach(e => {
+                existingData[e.idx]._status = '납기변경';
+                let prevBigo = existingData[e.idx]['비고'] || '';
+                prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
+                if (!prevBigo.includes('[납기:')) prevBigo = `[납기:${reqDate}]` + (prevBigo.trim() ? ` ${prevBigo}` : '');
+                existingData[e.idx]['비고'] = prevBigo;
+                if (matchedAtm) {
+                  existingData[e.idx]['배정 LOT'] = matchedAtm.id;
+                  existingData[e.idx]['납품일'] = matchedAtm.partDate;
+                  existingData[e.idx]['생산완료일'] = matchedAtm.prodDate;
+                  existingData[e.idx]['출하가능일'] = matchedAtm.shipDate;
+                  const currentLoad = atmLoad[matchedAtm.id] + 1;
+                  atmLoad[matchedAtm.id] = currentLoad;
+                }
+              });
+              changedItems.push({ sn: inputSN, oldDate: '미지정', newDate: normReq, clientName, fabName, model: modelInfo.model });
+            } else if (!normExisting && !reqDate) {
+              // 양쪽 모두 날짜 없음 → 유지
+              unchangedCount += qty;
+              existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
+            } else if (normExisting && normReq && normExisting !== normReq) {
+              // 실제 납기변경
               changedItems.push({ sn: inputSN, oldDate: normExisting, newDate: normReq, clientName, fabName, model: modelInfo.model });
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
-                // 비고의 [납기:...] 태그만 업데이트 (고객 납기 별도 컬럼 없음)
                 let prevBigo = existingData[e.idx]['비고'] || '';
                 if (prevBigo.includes('[납기:')) {
                   prevBigo = prevBigo.replace(/\[납기:[^\]]*\]/, `[납기:${reqDate}]`);
@@ -326,6 +361,10 @@ export default function App() {
                 }
                 existingData[e.idx]['비고'] = prevBigo;
               });
+            } else {
+              // normExisting 있고 reqDate 없음(미지정으로 변경) → 유지
+              unchangedCount += qty;
+              existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
             }
             return; // 중복 추가 방지
           }
@@ -365,11 +404,12 @@ export default function App() {
               }
             }
 
-            // 비고: [S/N:xxx] [납기:YYYY-MM-DD] 만 유지 (나머지는 대시보드)
+            // 비고: [S/N:xxx] [납기:YYYY-MM-DD 또는 미지정] (나머지는 대시보드)
             const bigoArr = [];
             if (inputSN) bigoArr.push(`[S/N:${inputSN}]`);
             if (reqDate) bigoArr.push(`[납기:${reqDate}]`);
-            if (capaWarning) bigoArr.push(capaWarning); // CAPA는 LOT 운영상 필요
+            else bigoArr.push('[납기:미지정]'); // TBD 등 날짜 미확정
+            if (capaWarning) bigoArr.push(capaWarning);
 
             newItems.push({
               '그룹': 'Sales',
