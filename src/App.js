@@ -810,10 +810,9 @@ export default function App() {
       worksheet.columns = fixedCols;
 
       results.forEach(row => {
-        const sn = extractSN(row['비고'] || '');
         worksheet.addRow({
           'W/O':       row['W/O'] || '',
-          'S/N':       sn,
+          'S/N':       row['S/N'] || '',
           '그룹':      row['그룹'] || '',
           '고객사':    row['고객사'] || '',
           'FAB':       row['FAB'] || '',
