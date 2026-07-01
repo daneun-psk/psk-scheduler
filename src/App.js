@@ -501,6 +501,7 @@ export default function App() {
             if (capaWarning) bigoArr.push(capaWarning);
 
             newItems.push({
+              'W/O': '', 'OEC 상': '', 'Ref.Tool': '', '수정일시': '', '수정자': '',
               '그룹': 'Sales',
               '고객사': clientName, 'FAB': fabName, 'PM': modelInfo.pm, '모델': modelInfo.model,
               '배정 LOT': assignedAtm, '비고': bigoArr.join(' '),
@@ -787,17 +788,47 @@ export default function App() {
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('FCST 배정결과');
-      const headers = getHeaders();
 
-      worksheet.columns = headers.map(h => ({
-        header: h, key: h,
-        width: h === '비고' ? 35 : (h === '모델' || h === '고객사' ? 20 : 15)
-      }));
+      const fixedCols = [
+        { header: 'W/O',       key: 'W/O',       width: 18 },
+        { header: 'S/N',       key: 'S/N',        width: 14 },
+        { header: '그룹',      key: '그룹',       width: 8  },
+        { header: '고객사',    key: '고객사',     width: 22 },
+        { header: 'FAB',       key: 'FAB',        width: 20 },
+        { header: 'PM',        key: 'PM',         width: 10 },
+        { header: '모델',      key: '모델',       width: 20 },
+        { header: '배정 LOT',  key: '배정 LOT',   width: 12 },
+        { header: 'OEC 상',    key: 'OEC 상',     width: 10 },
+        { header: 'Ref.Tool',  key: 'Ref.Tool',   width: 12 },
+        { header: '비고',      key: '비고',       width: 35 },
+        { header: '납품일',    key: '납품일',     width: 13 },
+        { header: '생산완료일', key: '생산완료일', width: 13 },
+        { header: '출하가능일', key: '출하가능일', width: 13 },
+        { header: '수정일시',  key: '수정일시',   width: 16 },
+        { header: '수정자',    key: '수정자',     width: 10 },
+      ];
+      worksheet.columns = fixedCols;
 
       results.forEach(row => {
-        const rowData = {};
-        headers.forEach(h => { rowData[h] = (h === '배정 LOT' || h === '배정LOT') ? displayLotId(row[h] || '') : (row[h] || ''); });
-        worksheet.addRow(rowData);
+        const sn = extractSN(row['비고'] || '');
+        worksheet.addRow({
+          'W/O':       row['W/O'] || '',
+          'S/N':       sn,
+          '그룹':      row['그룹'] || '',
+          '고객사':    row['고객사'] || '',
+          'FAB':       row['FAB'] || '',
+          'PM':        row['PM'] || '',
+          '모델':      row['모델'] || '',
+          '배정 LOT':  displayLotId(row['배정 LOT'] || row['배정LOT'] || ''),
+          'OEC 상':    row['OEC 상'] || '',
+          'Ref.Tool':  row['Ref.Tool'] || '',
+          '비고':      row['비고'] || '',
+          '납품일':    row['납품일'] || '',
+          '생산완료일': row['생산완료일'] || '',
+          '출하가능일': row['출하가능일'] || '',
+          '수정일시':  row['수정일시'] || '',
+          '수정자':    row['수정자'] || '',
+        });
       });
 
       const headerRow = worksheet.getRow(1);
@@ -817,7 +848,7 @@ export default function App() {
         }
       });
 
-      worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: results.length + 1, column: headers.length } };
+      worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: results.length + 1, column: fixedCols.length } };
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
