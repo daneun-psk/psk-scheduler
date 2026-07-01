@@ -852,7 +852,6 @@ export default function App() {
       totalDateChange: groupResults.reduce((s, g) => s + g.dateChangeCount, 0),
       totalOptimal: groupResults.reduce((s, g) => s + g.optimalCount, 0),
     });
-    setExpandedGroups({});
   };
 
   const downloadExcel = async () => {
