@@ -738,55 +738,91 @@ export default function App() {
 
         const currentShipDate = currentLot?.shipDate || '';
 
-        // 가능한 LOT 목록: shipDate ≤ 납기 AND (현재 LOT이거나 CAPA 여유)
-        const eligible = pool.filter(lot => {
-          const shipObj = new Date(lot.shipDate);
-          const isCurrent = lot.id === currentLotId;
-          const hasRoom = loadMap[lot.id] && (isCurrent || loadMap[lot.id].used < lot.maxCapa);
-          return shipObj <= reqDateObj && hasRoom;
-        });
+        const currentLoad = loadMap[currentLotId];
+        const isCapaOver = currentLoad && currentLoad.used > (currentLot?.maxCapa || 0);
+        const currentGap = currentShipObj
+          ? Math.floor((reqDateObj - currentShipObj) / 86400000) : null;
 
-        // 현재 LOT 자체가 납기 초과 → 다른 LOT으로 대안 탐색
+        // 현재 LOT 납기 초과
         if (currentShipObj && currentShipObj > reqDateObj) {
-          const altEligible = eligible.filter(lot => lot.id !== currentLotId);
-          if (altEligible.length > 0) {
-            const altLot = altEligible.reduce((best, lot) =>
+          const altInTime = pool.filter(lot => {
+            const sd = new Date(lot.shipDate);
+            return sd <= reqDateObj && lot.id !== currentLotId && loadMap[lot.id] && loadMap[lot.id].used < lot.maxCapa;
+          });
+          if (altInTime.length > 0) {
+            const altLot = altInTime.reduce((best, lot) =>
               new Date(lot.shipDate) > new Date(best.shipDate) ? lot : best
+            );
+            return {
+              type: 'improve', capaFlag: false, sn, currentLotId, currentShipDate,
+              suggestedLotId: altLot.id, suggestedShipDate: altLot.shipDate,
+              currentGap, optimalGap: Math.floor((reqDateObj - new Date(altLot.shipDate)) / 86400000),
+              reqDate, isDateChanged,
+            };
+          }
+          return { type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
+            msg: `출하일(${currentShipDate}) > 납기(${reqDate}) — 대안 LOT 없음` };
+        }
+
+        // CAPA 초과 → 여유 있는 LOT으로 이동 필요
+        if (isCapaOver) {
+          // 납기 내 여유 LOT 우선
+          const altInTime = pool.filter(lot => {
+            const sd = new Date(lot.shipDate);
+            return sd <= reqDateObj && lot.id !== currentLotId && loadMap[lot.id] && loadMap[lot.id].used < lot.maxCapa;
+          });
+          if (altInTime.length > 0) {
+            const altLot = altInTime.reduce((best, lot) =>
+              new Date(lot.shipDate) > new Date(best.shipDate) ? lot : best
+            );
+            return {
+              type: 'improve', capaFlag: true, sn, currentLotId, currentShipDate,
+              suggestedLotId: altLot.id, suggestedShipDate: altLot.shipDate,
+              currentGap, optimalGap: Math.floor((reqDateObj - new Date(altLot.shipDate)) / 86400000),
+              reqDate, isDateChanged,
+            };
+          }
+          // 납기 내 여유 없음 → 다음 LOT (납기 이후라도)
+          const altAfter = pool.filter(lot =>
+            lot.id !== currentLotId && loadMap[lot.id] && loadMap[lot.id].used < lot.maxCapa
+          );
+          if (altAfter.length > 0) {
+            const altLot = altAfter.reduce((best, lot) =>
+              Math.abs(new Date(lot.shipDate) - reqDateObj) < Math.abs(new Date(best.shipDate) - reqDateObj) ? lot : best
             );
             const altGap = Math.floor((reqDateObj - new Date(altLot.shipDate)) / 86400000);
             return {
-              type: 'improve', sn, currentLotId, currentShipDate,
+              type: 'improve', capaFlag: true, sn, currentLotId, currentShipDate,
               suggestedLotId: altLot.id, suggestedShipDate: altLot.shipDate,
-              currentGap: null, optimalGap: altGap, gapReduction: null,
+              currentGap, optimalGap: altGap,
               reqDate, isDateChanged,
-              msg: `현 LOT 납기초과 → ${altLot.id} 재배정 필요`,
             };
           }
-          return {
-            type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
-            msg: `출하일(${currentShipDate}) > 납기(${reqDate}) — 대안 LOT 없음`
-          };
+          return { type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged,
+            msg: 'CAPA 초과 — 여유 LOT 없음' };
         }
+
+        // 납기 내 여유 있는 LOT 중 최적 탐색
+        const eligible = pool.filter(lot => {
+          const sd = new Date(lot.shipDate);
+          const hasRoom = loadMap[lot.id] && (lot.id === currentLotId || loadMap[lot.id].used < lot.maxCapa);
+          return sd <= reqDateObj && hasRoom;
+        });
 
         if (eligible.length === 0) {
           return { type: 'invalid', sn, currentLotId, currentShipDate, reqDate, isDateChanged, msg: '가용 LOT 없음' };
         }
 
-        // 최적 LOT = shipDate가 납기에 가장 가까운 것
         const optimalLot = eligible.reduce((best, lot) =>
           new Date(lot.shipDate) > new Date(best.shipDate) ? lot : best
         );
-
-        const currentGap = currentShipObj
-          ? Math.floor((reqDateObj - currentShipObj) / 86400000) : null;
         const optimalGap = Math.floor((reqDateObj - new Date(optimalLot.shipDate)) / 86400000);
 
         if (optimalLot.id !== currentLotId) {
           return {
-            type: 'improve', sn, currentLotId, currentShipDate,
+            type: 'improve', capaFlag: false, sn, currentLotId, currentShipDate,
             suggestedLotId: optimalLot.id, suggestedShipDate: optimalLot.shipDate,
-            currentGap, optimalGap,
-            gapReduction: (currentGap ?? 0) - optimalGap,
+            currentGap, optimalGap, gapReduction: (currentGap ?? 0) - optimalGap,
             reqDate, isDateChanged,
           };
         }
@@ -798,6 +834,7 @@ export default function App() {
         key, clientName, modelName, items: itemResults,
         invalidCount: itemResults.filter(r => r.type === 'invalid').length,
         improveCount: itemResults.filter(r => r.type === 'improve').length,
+        capaCount: itemResults.filter(r => r.type === 'improve' && r.capaFlag).length,
         dateChangeCount: itemResults.filter(r => r.isDateChanged && r.type !== 'optimal').length,
         optimalCount: itemResults.filter(r => r.type === 'optimal').length,
       };
@@ -807,6 +844,7 @@ export default function App() {
       groups: groupResults,
       totalInvalid: groupResults.reduce((s, g) => s + g.invalidCount, 0),
       totalImprovable: groupResults.reduce((s, g) => s + g.improveCount, 0),
+      totalCapa: groupResults.reduce((s, g) => s + g.capaCount, 0),
       totalDateChange: groupResults.reduce((s, g) => s + g.dateChangeCount, 0),
       totalOptimal: groupResults.reduce((s, g) => s + g.optimalCount, 0),
     });
@@ -1403,9 +1441,15 @@ export default function App() {
                         <span className="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
                         납기변경→LOT재검토 {optimizationResult.totalDateChange}건
                       </span>
+                      {optimizationResult.totalCapa > 0 && (
+                        <span className="flex items-center gap-1 text-red-300 font-bold">
+                          <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                          🔴 CAPA초과이동 {optimizationResult.totalCapa}건
+                        </span>
+                      )}
                       <span className="flex items-center gap-1 text-yellow-300 font-bold">
                         <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                        개선가능 {optimizationResult.totalImprovable}건
+                        개선가능 {optimizationResult.totalImprovable - (optimizationResult.totalCapa || 0)}건
                       </span>
                       <span className="flex items-center gap-1 text-green-300 font-bold">
                         <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
@@ -1440,9 +1484,14 @@ export default function App() {
                                 🔄 납기변경 {group.dateChangeCount}
                               </span>
                             )}
-                            {group.improveCount > 0 && (
+                            {group.capaCount > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-bold">
+                                🔴 CAPA초과이동 {group.capaCount}
+                              </span>
+                            )}
+                            {(group.improveCount - (group.capaCount || 0)) > 0 && (
                               <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full font-bold">
-                                ⚡ 개선가능 {group.improveCount}
+                                ⚡ 개선가능 {group.improveCount - (group.capaCount || 0)}
                               </span>
                             )}
                             {group.optimalCount > 0 && (
@@ -1480,8 +1529,9 @@ export default function App() {
                                   {/* 상태 아이콘 */}
                                   <span className="col-span-1 font-bold flex items-center gap-1">
                                     {r.type === 'invalid' && <span>❌</span>}
-                                    {r.type === 'improve' && !isDateChanged && <span>⚡</span>}
-                                    {r.type === 'improve' && isDateChanged && <span title="납기변경으로 LOT 재검토 필요">🔄</span>}
+                                    {r.type === 'improve' && r.capaFlag && <span title="CAPA 초과 — LOT 이동 필요">🔴</span>}
+                                    {r.type === 'improve' && !r.capaFlag && !isDateChanged && <span>⚡</span>}
+                                    {r.type === 'improve' && !r.capaFlag && isDateChanged && <span title="납기변경으로 LOT 재검토 필요">🔄</span>}
                                     {r.type === 'optimal' && !isDateChanged && <span>✅</span>}
                                     {r.type === 'optimal' && isDateChanged && <span title="납기변경됐지만 현재 LOT 유지 가능">🔄✅</span>}
                                   </span>
