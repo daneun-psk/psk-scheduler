@@ -1460,6 +1460,7 @@ export default function App() {
                                   {/* 현재 LOT */}
                                   <span className={`col-span-2 font-bold ${r.type === 'invalid' ? 'text-red-600 line-through' : 'text-gray-800'}`}>
                                     {displayLotId(r.currentLotId)}
+                                    {r.currentLotId && r.currentLotId.includes('-27-') && <span className="ml-1 text-[9px] bg-blue-100 text-blue-700 rounded px-1 font-bold">'27</span>}
                                     {r.currentShipDate && (
                                       <span className="ml-1 text-gray-400 font-normal text-[10px]">({r.currentShipDate})</span>
                                     )}
@@ -1473,6 +1474,7 @@ export default function App() {
                                     {r.type === 'improve' && (
                                       <>
                                         {displayLotId(r.suggestedLotId)}
+                                        {r.suggestedLotId && r.suggestedLotId.includes('-27-') && <span className="ml-1 text-[9px] bg-blue-100 text-blue-700 rounded px-1 font-bold">'27</span>}
                                         {r.suggestedShipDate && (
                                           <span className="ml-1 text-indigo-400 font-normal text-[10px]">({r.suggestedShipDate})</span>
                                         )}
