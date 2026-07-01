@@ -619,15 +619,19 @@ export default function App() {
         maxCapa: lot.maxCapa,
         used: lot.items.length,
         overCount: lot.items.length - lot.maxCapa,
-        items: lot.items.map(item => ({
-          clientName: item['고객사'] || '-',
-          model: item['모델'] || '-',
-          reqDate: item['납품일'] || '-',
-          sn: extractSN(item['비고']),
-          gap: (lot.shipDate && item['납품일'])
-            ? Math.floor((new Date(item['납품일']) - new Date(lot.shipDate)) / 86400000)
-            : null,
-        })).sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0)),
+        items: lot.items.map(item => {
+          const customerReqDate = extractNakgi(item['비고']) || '';
+          const gap = (lot.shipDate && customerReqDate)
+            ? Math.floor((new Date(customerReqDate) - new Date(lot.shipDate)) / 86400000)
+            : null;
+          return {
+            clientName: item['고객사'] || '-',
+            model: item['모델'] || '-',
+            reqDate: customerReqDate || item['납품일'] || '-',
+            sn: extractSN(item['비고']),
+            gap,
+          };
+        }).sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0)),
       }))
       .sort((a, b) => b.overCount - a.overCount);
   };
