@@ -675,7 +675,7 @@ export default function App() {
         '납품일': newLot.partDate,
         '생산완료일': newLot.prodDate,
         '출하가능일': newLot.shipDate,
-        '비고': prevBigo, // 비고는 [S/N:] [납기:] 유지, LOT 변경 이력은 최적화 패널에서 확인
+        '비고': prevBigo.replace(/\s*CAPA초과\(\d+\/\d+\)/g, '').trim(),
         _status: row._status === '납기변경' ? '납기변경' : '재배정',
       };
     });
