@@ -664,10 +664,9 @@ export default function App() {
     const newLot = allLots.find(l => l.id === suggestedLotId);
     if (!newLot) return;
 
-    const updatedResults = results.map(row => {
+    const movedResults = results.map(row => {
       const rowSN = extractSN(row['비고']);
       if (rowSN !== sn) return row;
-      const currentLotId = row['배정 LOT'] || row['배정LOT'];
       const prevBigo = row['비고'] || '';
       return {
         ...row,
@@ -680,8 +679,28 @@ export default function App() {
       };
     });
 
+    // LOT별 실제 load 재계산 후 비고의 CAPA초과 텍스트 전체 동기화
+    const lotMap = {};
+    allLots.forEach(l => { lotMap[l.id] = { maxCapa: l.maxCapa, used: 0 }; });
+    movedResults.forEach(row => {
+      const lid = row['배정 LOT'] || row['배정LOT'];
+      if (lid && lotMap[lid]) lotMap[lid].used++;
+    });
+    // 순서대로 순회하며 누적 카운트로 비고 재기록
+    const lotCounter = {};
+    const updatedResults = movedResults.map(row => {
+      const lid = row['배정 LOT'] || row['배정LOT'];
+      if (!lid || !lotMap[lid]) return row;
+      lotCounter[lid] = (lotCounter[lid] || 0) + 1;
+      const { maxCapa } = lotMap[lid];
+      const bigo = (row['비고'] || '').replace(/\s*CAPA초과\(\d+\/\d+\)/g, '').trim();
+      if (lotCounter[lid] > maxCapa) {
+        return { ...row, '비고': `${bigo} CAPA초과(${lotCounter[lid]}/${maxCapa})`.trim() };
+      }
+      return { ...row, '비고': bigo };
+    });
+
     setResults(updatedResults);
-    // 업데이트된 results로 즉시 재최적화 → 패널 유지
     runOptimization(updatedResults);
   };
 
