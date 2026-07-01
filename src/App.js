@@ -812,7 +812,7 @@ export default function App() {
       results.forEach(row => {
         worksheet.addRow({
           'W/O':       row['W/O'] || '',
-          'S/N':       row['S/N'] || '',
+          'S/N':       '',
           '그룹':      row['그룹'] || '',
           '고객사':    row['고객사'] || '',
           'FAB':       row['FAB'] || '',
