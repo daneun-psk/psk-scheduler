@@ -395,8 +395,41 @@ export default function App() {
             const normReq = normDate(reqDate);
             const existingWasUnspecified = !normExisting || existingDate === '미지정';
 
+            // 기존 행의 LOT을 납기 기준으로 재배정 (연도 교체 대응)
+            const reassignLotIfNeeded = (eRow, rDate) => {
+              if (!rDate) return;
+              const currentLotId = eRow['배정 LOT'] || '';
+              const allLotPool = [
+                ...mappingRules.atmMaster,
+                ...(mappingRules.vacGeneralMaster || []),
+                ...(mappingRules.vacDecMaster || []),
+              ];
+              const currentLot = allLotPool.find(l => l.id === currentLotId);
+              if (!currentLot) return;
+              // 어떤 pool인지 판단
+              let pool = null;
+              if (currentLotId.startsWith('ATM-')) pool = mappingRules.atmMaster;
+              else if (currentLotId.startsWith('VAC-')) pool = mappingRules.vacGeneralMaster || [];
+              else if (currentLotId.startsWith('DEC-')) pool = mappingRules.vacDecMaster || [];
+              if (!pool) return;
+              const rdObj = new Date(rDate); rdObj.setHours(0,0,0,0);
+              let bestLot = null;
+              for (let j = pool.length - 1; j >= 0; j--) {
+                const l = pool[j];
+                if (!l.shipDate) continue;
+                const sd = new Date(l.shipDate); sd.setHours(0,0,0,0);
+                if (sd <= rdObj) { bestLot = l; break; }
+              }
+              if (bestLot && bestLot.id !== currentLotId) {
+                eRow['배정 LOT'] = bestLot.id;
+                eRow['납품일'] = bestLot.partDate;
+                eRow['생산완료일'] = bestLot.prodDate;
+                eRow['출하가능일'] = bestLot.shipDate;
+              }
+            };
+
             if (normExisting === normReq) {
-              // 완전 유지 (날짜 동일)
+              // 완전 유지 (날짜 동일) — LOT은 납기 기준 최적으로 재배정
               unchangedCount += qty;
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '유지';
@@ -404,6 +437,7 @@ export default function App() {
                 if (!bigo.includes('[납기:') && reqDate) {
                   existingData[e.idx]['비고'] = `[납기:${reqDate}]` + (bigo.trim() ? ` ${bigo}` : '');
                 }
+                reassignLotIfNeeded(existingData[e.idx], reqDate);
               });
             } else if (existingWasUnspecified && reqDate) {
               // 미지정 → 날짜 확정: 기존 행에 LOT 배정 및 날짜 업데이트
@@ -438,7 +472,7 @@ export default function App() {
               unchangedCount += qty;
               existingEntries.forEach(e => { existingData[e.idx]._status = '유지'; });
             } else if (normExisting && normReq && normExisting !== normReq) {
-              // 실제 납기변경
+              // 실제 납기변경 — LOT도 새 납기 기준으로 재배정
               changedItems.push({ sn: inputSN, oldDate: normExisting, newDate: normReq, clientName, fabName, model: modelInfo.model });
               existingEntries.forEach(e => {
                 existingData[e.idx]._status = '납기변경';
@@ -449,6 +483,7 @@ export default function App() {
                   prevBigo = `[납기:${reqDate}]` + (prevBigo.trim() ? ` ${prevBigo}` : '');
                 }
                 existingData[e.idx]['비고'] = prevBigo;
+                reassignLotIfNeeded(existingData[e.idx], reqDate);
               });
             } else {
               // normExisting 있고 reqDate 없음(미지정으로 변경) → 유지
